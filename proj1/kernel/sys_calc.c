@@ -52,7 +52,7 @@ asmlinkage int sys_calc(int param1, int param2, char operand, int *result)
 	else
 	{
 		// User entered an operand that isn't supported
-		printk(KERN_WARNING"Operand not supported: %p", &operand);
+		printk(KERN_WARNING"Operand not supported: %c", operand);
 		return -1;
 	}
 	return 0;
