@@ -1,1 +1,4 @@
 # obj-y += somefile.o
+
+# Add in sys_calc system call
+obj-y := sys_calc.o
