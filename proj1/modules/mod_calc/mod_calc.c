@@ -9,7 +9,10 @@ MODULE_DESCRIPTION("A module that modifies the functionality of the sys_calc sys
 MODULE_VERSION("0.1");
 
 
-unsigned long *sys_call_table = (unsigned long*)80108064;
+unsigned long *sys_call_table;
+
+
+
 
 
 asmlinkage int (*original_sys_calc)(int, int, char, int*);
@@ -46,6 +49,8 @@ asmlinkage int mod_sys_calc(int param1, int param2, char operand, int* result)
 static int init_mod_calc(void)
 {
 	printk("Loading Mod_calc\n");
+	sys_call_table =(unsigned long*) simple_strtoul("0x80108064",NULL,16);
+
 	// Store a copy of the original one so we can restore the functionality
 	original_sys_calc=sys_call_table[__NR_calc];
 	printk("Saved original sys_calc");
