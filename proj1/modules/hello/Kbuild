@@ -1,0 +1,2 @@
+# Hello from kernal space module
+obj-m += lkmhello.o
