@@ -64,7 +64,7 @@ int main(int argc, char *argv[] )
 		}
 		
 		// Call the calc system call
-		r = syscall(397,P1,P2,'+',&result);
+		r = syscall(397,P1,P2,op,&result);
 		
 		if(r == 0)
 		{
