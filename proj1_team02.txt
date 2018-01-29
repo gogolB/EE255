@@ -1,11 +1,25 @@
-Q1
-
+Q1 
+A system call is performed within the userspace process. Arguments as 
+well as the syscall number are loaded into registers. A software interrupt
+is then executed, which addresses a defined location in the kernel memory,
+and the processor switches to kernel mode. This switch allows the kernel
+functions called within the system call to be executed. The syscall number is 
+checked by the trap handler, which returns the kernel function to be executed.
+The OS searches for this function in the list of known kernel functions, 
+and calls this function. After the kernel function returns, the hardware 
+switches back to user mode, and the user process continues.
 
 Q2
-Access to data structures in userland needs to be syncronized only if multiple threads are attempting to access a single resource. 
+Access to data structures in userland needs to be syncronized only if multiple 
+threads are attempting to access a single resource. 
 
 Q3
-There are several synchronization mechanisms that can be used, semaphore and mutexes are a type of lock that is commonly used to access shared resources. 
+There are several synchronization mechanisms that can be used, semaphore and 
+mutexes are a type of lock that is commonly used to access shared resources. 
 
 Q4
-Spin locks can technically be used on a single processor platform. But using spin locks is not advisable because when the processor is spinning it won't be able to service the task that has the lock which means the task that is spinning will not be able to move acquire the lock and stop spinning. This situation is a type of deadlock.
+Spin locks can technically be used on a single processor platform. But using 
+spin locks is not advisable because when the processor is spinning it won't be 
+able to service the task that has the lock which means the task that is spinning 
+will not be able to move, acquire the lock, and stop spinning. This situation is 
+a type of deadlock.
