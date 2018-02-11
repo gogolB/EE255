@@ -1644,6 +1644,10 @@ struct task_struct {
 	cputime_t utime, stime, utimescaled, stimescaled;
 	cputime_t gtime;
 	struct prev_cputime prev_cputime;
+
+	// Project 2 Components
+	char rsv_task;				// 1 - this is a reserved task
+	struct timespec C, T;	
 #ifdef CONFIG_VIRT_CPU_ACCOUNTING_GEN
 	seqcount_t vtime_seqcount;
 	unsigned long long vtime_snap;
