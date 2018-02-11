@@ -408,7 +408,7 @@
 		CALL(sys_pkey_free)
 		// CALL(sys_calc)     // Call number 397 for Proj1
 		CALL(sys_set_rsv)     // Call number 397 for Proj2
-		CALL{sys_cancel_rsv)  // Call number 398 for Proj2
+		CALL(sys_cancel_rsv)  // Call number 398 for Proj2
 #ifndef syscalls_counted
 .equ syscalls_padding, ((NR_syscalls + 3) & ~3) - NR_syscalls
 #define syscalls_counted
