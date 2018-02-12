@@ -5,7 +5,7 @@
 #include <linux/ktime.h>
 #include <linux/hrtimer.h>
 
-#define timer_c_granularity 100*1000
+#define timer_c_granularity 10*1000*1000
 
 bool C_lessthan_T(struct timespec *C, struct timespec *T)
 {
