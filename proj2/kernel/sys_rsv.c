@@ -155,7 +155,7 @@ asmlinkage int sys_cancel_rsv(pid_t pid)
 	else
 	{
 		// Task was not reserved, no need to do anything.
-		printk(KERN_WARN"[RSV] No Reservation for PID: %u\n",target_pid);
+		printk(KERN_WARNING"[RSV] No Reservation for PID: %u\n",target_pid);
 		return -1;
 	}
 }
