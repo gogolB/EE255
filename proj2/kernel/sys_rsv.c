@@ -73,7 +73,21 @@ asmlinkage int sys_set_rsv(pid_t pid, struct timespec *C, struct timespec *T)
 		printk(KERN_ALERT"[RSV]Recieved bad address for C(0x%p) or T(0x%p)\n",C, T);
 		return -1;
 	}
+	
+	// Check and make sure that C isn't zero
+	if(C->tv_sec == 0 && C->tv_nsec == 0)
+	{
+		printk(KERN_ALERT"[RSV]C is 0!\n");
+		return -1;
+	}
 
+	// Check and make sure that T isn't zero
+	if(T->tv_sec == 0 && T->tv_nsec == 0)
+	{
+		printk(KERN_ALERT"[RSV]T is 0!\n");
+		return -1;
+	}
+		
 	// Make sure that C < T or C/T is <= 1
 	if(!C_lessthan_T(C,T))
 	{
