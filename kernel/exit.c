@@ -781,7 +781,7 @@ void __noreturn do_exit(long code)
 		hrtimer_cancel(&tsk->hr_C_Timer);
 		hrtimer_cancel(&tsk->hr_T_Timer);
 		tsk->rsv_task = 0;
-		printk(KERN_INFO"PID: %d was rsv'd and now canceled.", tsk->pid);	
+		printk(KERN_INFO"PID: %d was rsv'd and now is canceled.\n", tsk->pid);	
 	}
 
 	/*
