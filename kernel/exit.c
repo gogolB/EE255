@@ -775,6 +775,15 @@ void __noreturn do_exit(long code)
 	}
 
 	exit_signals(tsk);  /* sets PF_EXITING */
+	
+	if(tsk->rsv_task == 1)
+	{
+		hrtimer_cancel(&tsk->hr_C_Timer);
+		hrtimer_cancel(&tsk->hr_T_Timer);
+		tsk->rsv_task = 0;
+		printk(KERN_INFO"PID: %d was rsv'd and now canceled.", tsk->pid);	
+	}
+
 	/*
 	 * Ensure that all new tsk->pi_lock acquisitions must observe
 	 * PF_EXITING. Serializes against futex.c:attach_to_pi_owner().
