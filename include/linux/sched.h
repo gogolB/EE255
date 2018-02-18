@@ -1647,7 +1647,13 @@ struct task_struct {
 
 	// Project 2 Components
 	char rsv_task;				// 1 - this is a reserved task
-	struct timespec C, T;	
+	struct timespec C, T;
+	
+	struct timespec currentC;
+
+	struct hrtimer hr_C_Timer;
+	struct hrtimer hr_T_Timer;
+	// End Project 2 Components 		
 #ifdef CONFIG_VIRT_CPU_ACCOUNTING_GEN
 	seqcount_t vtime_seqcount;
 	unsigned long long vtime_snap;
