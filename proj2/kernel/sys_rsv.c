@@ -40,12 +40,24 @@ enum hrtimer_restart hr_c_timer_callback(struct hrtimer * timer)
 enum hrtimer_restart hr_t_timer_callback(struct hrtimer *timer)
 {
 	int ret;
+	double t1, double t2;
 	// This will reget the task.
 	struct task_struct *task;
 	task = container_of(timer, struct task_struct, hr_T_Timer);
 
 	// Stop the other C timer.
 	ret = hrtimer_cancel(&task->hr_C_Timer);
+
+	// The task has overun its budget
+	if(C_lessthan_T(task->C,&task->currentC))
+	{
+		t1 = task->currentC.tv_sec + (1e-9)*task->currentC.tv_nsec;
+		t2 = task->T->tv_sec + (1e-9)*task->T->tv_nsec;
+		printk("Task %s: budget overrun (util:%f %)\n", task->comm, t1/t2);
+		
+		// Send the signal. This will kill the process be default. 
+		kill_pid(task_pid(task), SIGUSR1, 1);
+	}
 
 	// Reset the Counter
 	task->currentC.tv_sec = 0;
