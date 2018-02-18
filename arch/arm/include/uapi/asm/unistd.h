@@ -426,7 +426,7 @@
 //#define __NR_calc			(__NR_SYSCALL_BASE+397)  // Proj1
 #define __NR_set_rsv			(__NR_SYSCALL_BASE+397)  // Proj2
 #define __NR_cancel_rsv			(__NR_SYSCALL_BASE+398)  // Proj2
-
+#define __NR_WAIT_UNTIL_NEXT_PERIOD	(__NR_SYSCALL_BASE+399)  // Proj2
 /*
  * The following SWIs are ARM private.
  */
