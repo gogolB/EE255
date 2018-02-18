@@ -5,6 +5,16 @@
 #include <linux/ktime.h>
 #include <linux/hrtimer.h>
 
+#define UINT64 long long int 
+#define UINT32 long int 
+
+static inline uint64_t lldiv(uint64_t dividend, uint32_t divisor)
+{
+    uint64_t __res = dividend;
+    do_div(__res, divisor);
+    return(__res);
+}
+
 #define timer_c_granularity 10*1000*1000
 
 bool C_lessthan_T(struct timespec *C, struct timespec *T)
@@ -40,7 +50,7 @@ enum hrtimer_restart hr_c_timer_callback(struct hrtimer * timer)
 enum hrtimer_restart hr_t_timer_callback(struct hrtimer *timer)
 {
 	int ret;
-	double t1, double t2;
+	uint64_t t1, t2;
 	// This will reget the task.
 	struct task_struct *task;
 	task = container_of(timer, struct task_struct, hr_T_Timer);
@@ -51,9 +61,10 @@ enum hrtimer_restart hr_t_timer_callback(struct hrtimer *timer)
 	// The task has overun its budget
 	if(C_lessthan_T(task->C,&task->currentC))
 	{
-		t1 = task->currentC.tv_sec + (1e-9)*task->currentC.tv_nsec;
-		t2 = task->T->tv_sec + (1e-9)*task->T->tv_nsec;
-		printk("Task %s: budget overrun (util:%f %)\n", task->comm, t1/t2);
+		t1 = 1000*1000*1000*task->currentC.tv_sec + task->currentC.tv_nsec;
+		t2 = 1000*1000*1000*task->T->tv_sec + task->T->tv_nsec;
+	
+		printk("Task %s: budget overrun (util:%llu %%)\n", task->comm, lldiv(t1*100,t2));
 		
 		// Send the signal. This will kill the process be default. 
 		kill_pid(task_pid(task), SIGUSR1, 1);
