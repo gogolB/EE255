@@ -3399,7 +3399,26 @@ static void __sched notrace __schedule(bool preempt)
 		++*switch_count;
 
 		trace_sched_switch(preempt, prev, next);
+		
+	
+		// Project 2 Specific
+		if(prev->rsv_task == 1)
+		{
+			// Need to stop the timers for this particular task.
+			hrtimer_cancel(&task->hr_C_Timer);
+			hrtimer_cancel(&task->hr_T_Timer);
+		}		
+		
+
+		if(next->rsv_task == 1)
+		{
+			// Restart the timers for this particular task.
+			hrtimer_restart(&task->hr_C_Timer);
+			hrtimer_restart(&task->hr_T_Timer);
+		}
 		rq = context_switch(rq, prev, next, cookie); /* unlocks the rq */
+				
+
 	} else {
 		lockdep_unpin_lock(&rq->lock, cookie);
 		raw_spin_unlock_irq(&rq->lock);
