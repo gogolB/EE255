@@ -152,7 +152,7 @@ asmlinkage int sys_cancel_rsv(pid_t pid)
 		target_pid = pid;
 	}
 	
-	pid_struct = find_get_pid(pid);
+	pid_struct = find_get_pid(target_pid);
 	task = (struct task_struct *)pid_task(pid_struct, PIDTYPE_PID);
 
 	if(task->rsv_task == 1)
