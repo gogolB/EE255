@@ -1647,7 +1647,7 @@ struct task_struct {
 
 	// Project 2 Components
 	char rsv_task;				// 1 - this is a reserved task
-	struct timespec C, T;
+	struct timespec *C, *T;
 	
 	struct timespec currentC;
 
