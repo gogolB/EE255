@@ -21,6 +21,7 @@ static int numberOpens = 0;
 static struct class* rsvdevClass = NULL;
 static struct device* rsvdevDevice = NULL;
 
+static char message[1024] = {0};
 
 // Prototype functions for the character driver -- must come before struct defination
 static int 	dev_open(struct inode*, struct file *);
@@ -95,17 +96,32 @@ static int dev_open(struct inode *inodep, struct file *fileptr)
 
 static ssize_t dev_read(struct file *fileptr, char* buffer, size_t len, loff_t *offset)
 {
-	int location = snprintf(buffer, len, "pid\ttgid\tprio\tname\n");
+	int errorCount =0;
+	int location = snprintf(message, 1024, "pid\ttgid\tprio\tname\n");
 	struct task_struct *task;
 	for_each_process(task)
 	{
 		if(task->rsv_task == 1)
 		{
-			location += snprintf(buffer + location, len - location, "%d\t%d\t%d\t%s\n",task->pid, task->tgid, task->prio, task->comm);
+			location += snprintf(message + location, 1024 - location, "%d\t%d\t%d\t%s\n",task->pid, task->tgid, task->prio, task->comm);
 			
 		}
 	}
-	return 0;
+	errorCount = copy_to_user(buffer, message + (*offset), location-(*offset));
+	if(errorCount==0)
+	{
+		printk(KERN_INFO"[RSVDEV] Info copied to user(%d)(offset:%d)\n",location,(int)(*offset));	
+		//(*offset) += location - (*offset);		
+		
+		//return location - (*offset);
+		return simple_read_from_buffer(buffer, len, offset, message, location);
+	}
+	else
+	{
+		printk(KERN_WARNING"[RSVDEV] Failed to send %d bytes to user\n", errorCount);
+		return -EFAULT;
+	}
+	
 }
 
 static int dev_release(struct inode *inodep, struct file *fileptr)
