@@ -4,6 +4,7 @@
 #include <linux/pid.h>
 #include <linux/ktime.h>
 #include <linux/hrtimer.h>
+#include <linux/mutex.h>
 
 #define UINT64 long long int 
 #define UINT32 long int 
@@ -15,6 +16,18 @@ static inline uint64_t lldiv(uint64_t dividend, uint32_t divisor)
     return(__res);
 }
 
+DEFINE_MUTEX(rsv_task_mutex);
+
+typedef struct {
+	pid_t pid;
+	struct timespec *T;
+} tTuple; 
+
+
+static tTuple rsv_tasks[50];
+
+static int num_rsv_tasks;
+
 #define timer_c_granularity 10*1000*1000
 
 bool C_lessthan_T(struct timespec *C, struct timespec *T)
@@ -23,6 +36,148 @@ bool C_lessthan_T(struct timespec *C, struct timespec *T)
 		return C->tv_nsec <= T->tv_nsec;
 	else
 		return C->tv_sec <= T->tv_sec; 
+}
+
+void update_scheduler(void)
+{
+	struct sched_param param;
+	int status;
+	int low_priority, high_priority;
+
+	struct task_struct *task;
+	struct pid *pid_struct;
+
+	struct timespec *currentPeriod;
+	
+	high_priority = sched_get_priority_max(SCHED_FIFO);
+	if(high_priority < 0)
+	{
+		printk(KERN_ALERT"[RSV] Could not get high priority\n");
+		return;
+	}
+	low_priority = sched_get_priority_min(SCHED_FIFO);
+	if(low_priority < 0)
+	{
+		printk(KERN_ALERT"[RSV] Could not get low priority\n");
+		return;
+	}
+		
+
+	for(int i = 0; i < num_rsv_tasks; i++)
+	{
+		pid_t = rsv_tasks[i].pid;
+		// Get the TCB
+		pid_struct = find_get_pid(pid);	
+		task = (struct task_struct*)pid_task(pid_struct,PIDTYPE_PID);	
+		
+		if(i == 0)
+		{
+			currentPeriod = task->T;
+		}
+		
+		// Get the old policy		
+		task->old_policy = sched_getscheduler(pid);
+		if(task->old_policy < 0)
+		{
+			// Failed to get something. Skip this one.
+			printk(KERN_ALERT"[RSV] Failed to get policy for pid: %u\n",pid);
+			continue;
+		}
+
+		// Get the old priority
+		status = sched_getparam(pid, &param);
+		if(status < 0)
+		{
+			// Failed to get something. Skip this one.
+			printk(KERN_ALERT"[RSV] Failed to get priority for pid: %u\n",pid);
+			continue;
+		}
+		task->old_priority = param.sched_priority;
+
+		// Set the new priority
+		param.sched_priority = high_priority;
+		status = sched_setcheduler(pid,SCHED_FIFO,&param);
+		if(status < 0)
+		{
+			// Failed to set something. Skip this one.
+			printk(KERN_ALERT"[RSV] Failed to set sched and priority for pid: %u\n",pid);
+			continue;
+		}
+
+		if(C_lessthan_T(currentPeriod,task->T))
+		{
+			currentPeriod = task->T;
+			high_priority--;
+		}
+		
+	}
+}
+
+// Assume the list is already organized.
+void addRsvTask(pid_t pid, struct timespec *T)
+{
+	mutex_lock(rsv_task_mutex);
+	// Find the index to insert at
+	int index;
+	for(int i = 0; i < num_rsv_tasks; i++)
+	{
+		if(C_lessthan_T(T, &rsv_tasks[i].T))
+		{
+			index = i;
+			break;
+		}
+	}
+
+	// Shift everything down by one.
+	for(int i = index; i < num_rsv_tasks;i++)
+	{
+		rsv_tasks[i + 1].pid = rsv_tasks[i].pid;
+		rsv_tasks[i + 1].T = rsv_tasks[i].T;
+	}
+	// Insert the new one.
+	rsv_tasks[index].pid = pid;
+	rsv_task[index].T = T;
+
+	// Increment number of reserved tasks
+	num_rsv_taks++;
+
+	// Update the scheduler.
+	update_scheduler();
+	mutex_unlock(rsv_task_mutex);
+}
+
+
+// Assume the list is already organized. 
+void removeRsvTask(pid_t pid)
+{
+	mutex_lock(rsv_task_mutex);
+	// Find the index.
+	int index;
+	for(int i = 0; i < num_rsv_tasks; i++)
+	{
+		if(pid == rsv_tasks[i].pid)
+		{
+			index = i;
+			break;
+		}
+	}
+
+	
+			
+	// Shift everything up by one.
+	for(int i = index+1; i < num_rsv_tasks;i++)
+	{
+		rsv_tasks[i - 1].pid = rsv_tasks[i].pid;
+		rsv_tasks[i - 1].T = rsv_tasks[i].T;
+	}
+	// Remove the task
+	rsv_tasks[num_rsv_tasks].pid = 0;
+	rsv_tasks[num_rsv_tasks].T = NULL;
+	// Reduce the number of reserved tasks
+	num_rsv_task++;
+	// Update the scheduler
+	update_scheduler();
+	mutex_unlock(rsv_task_mutex);
 }
 
 enum hrtimer_restart hr_c_timer_callback(struct hrtimer * timer)
@@ -168,6 +323,9 @@ asmlinkage int sys_set_rsv(pid_t pid, struct timespec *C, struct timespec *T)
 	hrtimer_start(&task->hr_C_Timer, ktime_C, HRTIMER_MODE_REL);
 	hrtimer_start(&task->hr_T_Timer, ktime_T, HRTIMER_MODE_REL);
 	printk(KERN_INFO"[RSV] Started task timers for PID: %u\n", target_pid);
+
+	// Adding to RT scheduling
+	addRsvTask(target_pid,T);
 	return 0;
 }
 
@@ -176,6 +334,9 @@ asmlinkage int sys_cancel_rsv(pid_t pid)
 	pid_t target_pid;
 	struct task_struct *task;
 	struct pid *pid_struct;
+	int status;
+	struct sched_param param;
+
 	if(pid == 0)
 	{
 		target_pid = current->pid;
@@ -203,6 +364,24 @@ asmlinkage int sys_cancel_rsv(pid_t pid)
 		// Clear the flag.
 		task->rsv_task = 0;
 		printk(KERN_INFO"[RSV] Rsv canceled for PID: %u\n",target_pid);
+
+		// Remove it.
+		removeRsvTask(target_pid);
+
+		// Restore the old policy and priority.
+		status = sched_getparam(target_pid,&param);
+		if(status <0)
+		{
+			printk(KERNALERT"[RSV] Failed to get old parms for canceling\n");
+			return -1;
+		}
+		param.sched_priority = task->old_priority;
+		status = sched_setscheduler(target_pid, task->old_policy, &param);
+		if(status <0)
+		{
+			printk(KERNALERT"[RSV] Failed to restore old params for canceling\n");
+			return -1;
+		}
 		return 0;
 	}
 	else
