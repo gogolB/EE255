@@ -93,7 +93,7 @@ asmlinkage int sys_set_rsv(pid_t pid, struct timespec *C, struct timespec *T)
 	ktime_t ktime_C;
 
 	// Check all the params for nulls
-	if(C == 0 || T == 0)
+	if(C == NULL || T == NULL)
 	{
 		// We got bad addresses for C or T
 		printk(KERN_ALERT"[RSV]Recieved bad address for C(0x%p) or T(0x%p)\n",C, T);
@@ -136,7 +136,14 @@ asmlinkage int sys_set_rsv(pid_t pid, struct timespec *C, struct timespec *T)
 	
 
 	// Now we get the TCB
-	pid_struct = find_get_pid(pid);
+	pid_struct = find_get_pid(target_pid);
+	
+	if(pid_struct == NULL)
+	{
+		printk(KERN_ALERT"[RSV] failed to get a pid struct. Bad PID: %u\n",target_pid);
+		return -1;
+	}	
+	
 	task = (struct task_struct*)pid_task(pid_struct,PIDTYPE_PID);		
 	
 	printk(KERN_INFO"[RSV]Setting task to be reserved\n");
@@ -179,6 +186,12 @@ asmlinkage int sys_cancel_rsv(pid_t pid)
 	}
 	
 	pid_struct = find_get_pid(target_pid);
+	if(pid_struct == NULL)
+	{
+		printk(KERN_ALERT"[RSV] Failed to find a pid struct. Bad PID:%u\n",target_pid);
+		return -1;
+	}
+	
 	task = (struct task_struct *)pid_task(pid_struct, PIDTYPE_PID);
 
 	if(task->rsv_task == 1)
