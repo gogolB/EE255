@@ -23,8 +23,6 @@ int main(void)
 	//struct timespec for a few tasks we want to launch
 	struct timespec C1;
 	struct timespec T1;
-	struct timespec C2;
-	struct timespec T2;
 	// Don't forget the threads!
 	struct timespec C_thread1;
 	struct timespec T_thread1;
@@ -32,28 +30,37 @@ int main(void)
 	
 
 	int r1;
-	int r2;
 	int r_thread;
 	
 	// Test Set C1 to 20ms;
-	C1.tv_sec = 0.02;  // C1 = 20ms
-	C1.tv_nsec = C1.tv_sec*S_TO_NS;
+	C1.tv_sec = 0;  // C1 = 20ms
+	C1.tv_nsec = 0.02*1000*1000*1000;
 
 	// Test Set T1 to 100ms;
-	T1.tv_sec = 0.1;  // T1 = 100ms
-	T1.tv_nsec = T1.tv_sec*S_TO_NS;
+	T1.tv_sec = 0;  // T1 = 100ms
+	T1.tv_nsec = 0.1*1000*1000*1000;
 	///////////////////////////////////////////////////////////////
 	// Test Set C2 to 40ms;
-	C2.tv_sec = 0.04;  // C2 = 40ms
-	C2.tv_nsec = C2.tv_sec*S_TO_NS;
+	C_thread1.tv_sec = 0;  // C2 = 40ms
+	C_thread1.tv_nsec = 0.04*1000*1000*1000;
 
 	// Test Set T2 to 150ms;
-	T2.tv_sec = 0.15;  // T1 = 150ms
-	T2.tv_nsec = T2.tv_sec*S_TO_NS;
-	///////////////////////////////////////////////////////////////
-	// Let Task 3 be the thread
-
-
+	T_thread1.tv_sec = 0;  // T1 = 150ms
+	T_thread1.tv_nsec = 0.15*1000*1000*1000;
+	
+    printTestHeader("Checking the test parameters");
+    printf("C1_nsec = %.9ld\n", C1.tv_nsec);
+    printf("T1_nsec = %.9ld\n", T1.tv_nsec);
+    if (T1.tv_nsec != 100000000 || C1.tv_nsec != 20000000)
+    {
+		return -1;
+	}
+	printf("C_thread1_nsec = %.9ld\n", C1.tv_nsec);
+    printf("T_thread1_nsec = %.9ld\n", T1.tv_nsec);
+    if (T_thread1.tv_nsec != 150000000 || C_thread1.tv_nsec != 40000000)
+    {
+		return -1;
+	}
 	// Canceling a call that doesn't exist.
 	printTestHeader("Canceling a call that doesn't exist");
 	r1 = syscall(398,0);
@@ -75,17 +82,18 @@ int main(void)
 	}
 	printf("Valid C1 and T1 passed\n");
 	
-	// Valid C2 and T2
-	printTestHeader("Valid C2 and T2 addresses");
-	r2 = syscall(397,0,&C2,&T2);
-	if(r2 != 0)
+	// Create thread and launch new reserve with C_thread1 and T_thread1
+	
+	 Attempt to cancel taksk1
+	printTestHeader("Canceling task 1");
+	r1 = syscall(398,0);
+	if(r1 != 0)
 	{
-		printf("Test failed, Something went wrong\n");
+		printf("Test failed. Something went wrong\n");
 		return -1;
 	}
-	printf("Valid C2 and T2 passed\n");
+	printf("Canceling an existing task worked!\n");
 	
-	// Attempt to cancel
 
 
 	
