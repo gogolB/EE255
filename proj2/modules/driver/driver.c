@@ -98,15 +98,16 @@ static ssize_t dev_read(struct file *fileptr, char* buffer, size_t len, loff_t *
 {
 	int errorCount =0;
 	int location = snprintf(message, 1024, "pid\ttgid\tprio\tname\n");
-	struct task_struct *task;
-	for_each_process(task)
+	struct task_struct *g,*p;
+	rcu_read_lock();
+	do_each_thread(g,p)
 	{
-		if(task->rsv_task == 1)
+		if(p->rsv_task == 1)
 		{
-			location += snprintf(message + location, 1024 - location, "%d\t%d\t%d\t%s\n",task->pid, task->tgid, task->prio, task->comm);
-			
+			location += snprintf(message + location, 1024 - location, "%d\t%d\t%d\t%s\n",p->pid, p->tgid, p->prio, p->comm);
 		}
-	}
+	} while_each_thread(g,p);
+	rcu_read_unlock();
 	errorCount = copy_to_user(buffer, message + (*offset), location-(*offset));
 	if(errorCount==0)
 	{
