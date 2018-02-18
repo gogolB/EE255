@@ -3405,16 +3405,16 @@ static void __sched notrace __schedule(bool preempt)
 		if(prev->rsv_task == 1)
 		{
 			// Need to stop the timers for this particular task.
-			hrtimer_cancel(&task->hr_C_Timer);
-			hrtimer_cancel(&task->hr_T_Timer);
+			hrtimer_cancel(&prev->hr_C_Timer);
+			hrtimer_cancel(&prev->hr_T_Timer);
 		}		
 		
 
 		if(next->rsv_task == 1)
 		{
 			// Restart the timers for this particular task.
-			hrtimer_restart(&task->hr_C_Timer);
-			hrtimer_restart(&task->hr_T_Timer);
+			hrtimer_restart(&next->hr_C_Timer);
+			hrtimer_restart(&next->hr_T_Timer);
 		}
 		rq = context_switch(rq, prev, next, cookie); /* unlocks the rq */
 				

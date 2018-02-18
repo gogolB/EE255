@@ -53,6 +53,9 @@ enum hrtimer_restart hr_t_timer_callback(struct hrtimer *timer)
 
 	// Restart the C timer.
 	hrtimer_restart(&task->hr_C_Timer);	
+	
+	// Wake up the task
+	kill_pid(task_pid(task), SIGCONT, 1);
 	return HRTIMER_RESTART;
 }
 

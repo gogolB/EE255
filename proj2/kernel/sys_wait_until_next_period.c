@@ -5,7 +5,7 @@
 #include <linux/hrtimer.h>
 #include <linux/sched.h>
 
-asmlinkage int sys_wait_until_next_period()
+asmlinkage int sys_wait_until_next_period(void)
 {
 	if(current->rsv_task != 1)
 	{
@@ -13,5 +13,6 @@ asmlinkage int sys_wait_until_next_period()
 		return -1;
 	}
 	
+	kill_pid(task_pid(current), SIGSTOP, 1);	
 	return 0;
 }
