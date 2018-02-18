@@ -1,11 +1,15 @@
 1. Difference between concurrent and parallel?
-
+	Cocurrency refers to a specific order of execution, while parallel implies execution of tasks simultaneously.
 
 
 2. 
-	a.)
+	Note that Dexter's syscall takes 100us + 1ns to get the generated data pointfrom kernel to user land.
+	a.) No points are lost. The data is generated at 1 point per millisecond which gives Dexter's syscall enough
+	    time to complete before new data arrives.
 
-	b.)
+	b.) Data is now generated at 1us. Approximately 99% of data is lost due to overhead delay. Assuming it takes 50us to
+	    get from user space to kernel space, the first 50 points are lost. the 51st point will be copied due to the 1ns
+    	    copy time. After, another 50 points will be lost. This ycle repeats.
 
 	c.)
 
