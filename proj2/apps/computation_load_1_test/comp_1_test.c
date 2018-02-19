@@ -37,6 +37,11 @@ bool C_lessthan_T(struct timespec *C, struct timespec *T)
 		return C->tv_sec <= T->tv_sec; 
 }
 
+void overflowHandler()
+{
+	printf("I USED TOO MUCH TIME!\n");
+	//exit(-1);
+}
 
 int main(void)
 {
@@ -45,7 +50,8 @@ int main(void)
 	struct timespec req,rem;
 	
 	// Register sig int handler.
-	signal(SIGINT, intHandler);	
+	signal(SIGINT, intHandler);
+	signal(SIGUSR1, overflowHandler);	
 
 	req.tv_sec = 0;
 	req.tv_nsec = 80*MS_TO_NS;

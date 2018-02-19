@@ -1652,11 +1652,13 @@ struct task_struct {
 	struct timespec currentC;
 
 	spinlock_t sp_lock;//=SPIN_LOCK_UNLOCKED; 
-	struct hrtimer hr_C_Timer;
-	struct hrtimer hr_T_Timer;
+	struct hrtimer_sleeper *hr_C_Timer;
+	struct hrtimer_sleeper *hr_T_Timer;
+
+	int accumulate;
 
 	int old_policy, old_priority;
-
+	struct timer_list g_timer;
 	// End Project 2 Components 		
 #ifdef CONFIG_VIRT_CPU_ACCOUNTING_GEN
 	seqcount_t vtime_seqcount;

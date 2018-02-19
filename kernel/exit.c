@@ -778,8 +778,10 @@ void __noreturn do_exit(long code)
 	
 	if(tsk->rsv_task == 1)
 	{
-		hrtimer_cancel(&tsk->hr_C_Timer);
-		hrtimer_cancel(&tsk->hr_T_Timer);
+		hrtimer_cancel(&tsk->hr_C_Timer->timer);
+		hrtimer_cancel(&tsk->hr_T_Timer->timer);
+		kfree(tsk->hr_C_Timer);
+		kfree(tsk->hr_C_Timer);
 		tsk->rsv_task = 0;
 		printk(KERN_INFO"PID: %d was rsv'd and now is canceled.\n", tsk->pid);	
 	}
