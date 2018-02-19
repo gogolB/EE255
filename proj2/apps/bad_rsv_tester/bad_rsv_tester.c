@@ -82,6 +82,16 @@ int main(void)
 		return -1;
 	}
 	printf("Bad T param passed\n");
+
+	// Bad T param test
+	printTestHeader("Wait for next period");
+	r = syscall(399);
+	if(r != -1)
+	{
+		printf("Test Didn't fail\n");
+		return -1;
+	}
+	printf("Wait for test reservation passed\n");
 	
 	return 0;
 }

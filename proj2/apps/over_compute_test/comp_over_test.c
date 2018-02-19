@@ -3,13 +3,7 @@
 #include <asm/unistd.h>
 #include <time.h>
 #include <stdbool.h>
-#include <signal.h>
 
-static volatile int keepRunning = 1;
-void intHandler(int dummy)
-{
-	keepRunning = 0;
-}
 #define MS_TO_NS 1000*1000
 
 struct timespec timespec_diff(struct timespec *t1, struct timespec *t2)
@@ -43,12 +37,8 @@ int main(void)
 	struct timespec C, T;
 	struct timespec t1, t2, diff;
 	struct timespec req,rem;
-	
-	// Register sig int handler.
-	signal(SIGINT, intHandler);	
-
 	req.tv_sec = 0;
-	req.tv_nsec = 80*MS_TO_NS;
+	req.tv_nsec = 50*MS_TO_NS;
 	int r;
 	// Test Set C to zero;
 	C.tv_sec = 0;
@@ -58,30 +48,23 @@ int main(void)
 	T.tv_sec = 0;
 	T.tv_nsec = 100*MS_TO_NS;
 
+	C.tv_nsec = 50*MS_TO_NS;
+
 	// Set Reservation
 	r = syscall(397,0,&C,&T);
-	printf("Reservation set! r = %d\n", r);
-	
-	if(r == -1)
-	{
-		printf("Failed to set reservation\n");
-		return -1;
-	}
-	
-	while (keepRunning) {
+	while (1) {
 		struct timespec t1, t2;
 		clock_gettime(CLOCK_THREAD_CPUTIME_ID, &t1);
 		while (1) 
 		{
 			clock_gettime(CLOCK_THREAD_CPUTIME_ID, &t2);
 			diff = timespec_diff(&t1,&t2);
-			if (!C_lessthan_T(&diff,&C)) 
+			if (!C_lessthan_T(&diff , &C)) 
 				break;
-			printf("Diff: %d,%d\n",diff.tv_sec, diff.tv_nsec);
 		}
+		
 		// Wait for next period
 		r = syscall(399);
-		printf("value of r = %d\n", r);
 	}
 
 	return 0;

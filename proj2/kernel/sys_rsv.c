@@ -5,6 +5,7 @@
 #include <linux/ktime.h>
 #include <linux/hrtimer.h>
 #include <linux/mutex.h>
+#include <linux/spinlock.h>
 
 #define UINT64 long long int 
 #define UINT32 long int 
@@ -87,7 +88,7 @@ void update_scheduler(void)
 		if(status < 0)
 		{
 			// Failed to set something. Skip this one.
-			printk(KERN_ALERT"[RSV] Failed to set sched and priority for pid: %u\n",pid);
+			printk(KERN_ALERT"[RSV] Failed to set new sched and priority for pid: %u\n",pid);
 			continue;
 		}
 
@@ -173,13 +174,16 @@ enum hrtimer_restart hr_c_timer_callback(struct hrtimer * timer)
 {
 	// This regets the task
 	struct task_struct *task;
+
 	task = container_of(timer, struct task_struct, hr_C_Timer);
 
 	task->currentC.tv_nsec += timer_c_granularity;
-	
+	printk("C TIMER reached for PID: %u\n", task->pid);
 	// Assuming branch predict true.
 	if(task->currentC.tv_nsec < 1000*1000*1000)
 	{
+
+		hrtimer_forward(timer,hrtimer_cb_get_time(timer),ktime_set(0,timer_c_granularity));
 		return HRTIMER_RESTART;
 	}
 	else
@@ -187,6 +191,7 @@ enum hrtimer_restart hr_c_timer_callback(struct hrtimer * timer)
 		// More than 1 second worth of Nano seconds have passed, so update all the variables.
 		task->currentC.tv_sec += 1;
 		task->currentC.tv_nsec -= 1000*1000*1000;
+		hrtimer_forward(timer,hrtimer_cb_get_time(timer),ktime_set(0,timer_c_granularity));
 		return HRTIMER_RESTART;
 	}
 }
@@ -195,10 +200,14 @@ enum hrtimer_restart hr_t_timer_callback(struct hrtimer *timer)
 {
 	int ret;
 	uint64_t t1, t2;
+
 	// This will reget the task.
 	struct task_struct *task;
 	task = container_of(timer, struct task_struct, hr_T_Timer);
 
+	printk("T TIMER reached for PID: %u\n", task->pid);
+
+	//spin_lock_irqsave(&task->sp_lock,flags);
 	// Stop the other C timer.
 	ret = hrtimer_cancel(&task->hr_C_Timer);
 
@@ -211,7 +220,7 @@ enum hrtimer_restart hr_t_timer_callback(struct hrtimer *timer)
 		printk("Task %s: budget overrun (util:%llu %%)\n", task->comm, lldiv(t1*100,t2));
 		
 		// Send the signal. This will kill the process be default. 
-		kill_pid(task_pid(task), SIGUSR1, 1);
+		//kill_pid(task->pid, SIGUSR1, 1);
 	}
 
 	// Reset the Counter
@@ -222,7 +231,15 @@ enum hrtimer_restart hr_t_timer_callback(struct hrtimer *timer)
 	hrtimer_restart(&task->hr_C_Timer);	
 	
 	// Wake up the task
-	kill_pid(task_pid(task), SIGCONT, 1);
+	ret = wake_up_process(task);
+	if(ret == 1)
+		printk("Process %s woke up\n", task->comm);
+	else
+		printk("Process %s was up\n", task->comm);
+
+	//spin_unlock_irqrestore(&task->sp_lock,flags);
+	hrtimer_forward(timer,hrtimer_cb_get_time(timer),ktime_set(task->T->tv_sec,task->T->tv_nsec));
+	printk("Task %s: restarted, timer restarted\n", task->comm);
 	return HRTIMER_RESTART;
 }
 
@@ -308,8 +325,8 @@ asmlinkage int sys_set_rsv(pid_t pid, struct timespec *C, struct timespec *T)
 	ktime_T = ktime_set(T->tv_sec,T->tv_nsec);	// Run every T
 	
 	// Init the timer.
-	hrtimer_init(&task->hr_C_Timer,CLOCK_MONOTONIC, HRTIMER_MODE_REL);
-	hrtimer_init(&task->hr_T_Timer,CLOCK_MONOTONIC, HRTIMER_MODE_REL);
+	hrtimer_init(&task->hr_C_Timer,CLOCK_MONOTONIC, HRTIMER_MODE_REL|HRTIMER_MODE_PINNED);
+	hrtimer_init(&task->hr_T_Timer,CLOCK_MONOTONIC, HRTIMER_MODE_REL|HRTIMER_MODE_PINNED);
 	
 	// Set the call back functions
 	task->hr_C_Timer.function = &hr_c_timer_callback;
@@ -320,8 +337,6 @@ asmlinkage int sys_set_rsv(pid_t pid, struct timespec *C, struct timespec *T)
 	hrtimer_start(&task->hr_T_Timer, ktime_T, HRTIMER_MODE_REL);
 	printk(KERN_INFO"[RSV] Started task timers for PID: %u\n", target_pid);
 
-	// Adding to RT scheduling
-	addRsvTask(target_pid,T);
 	return 0;
 }
 
@@ -365,16 +380,16 @@ asmlinkage int sys_cancel_rsv(pid_t pid)
 		printk(KERN_INFO"[RSV] Rsv canceled for PID: %u\n",target_pid);
 
 		// Remove it.
-		removeRsvTask(target_pid);
+		//removeRsvTask(target_pid);
 
 		// Restore the old policy and priority.
-		param.sched_priority = task->old_priority;
-		status = sched_setscheduler(task, task->old_policy, &param);
-		if(status <0)
-		{
-			printk(KERN_ALERT"[RSV] Failed to restore old params for canceling\n");
+		//param.sched_priority = task->old_priority;
+		//status = sched_setscheduler(task, task->old_policy, &param);
+		//if(status <0)
+		//{
+		//	printk(KERN_ALERT"[RSV] Failed to restore old params for canceling\n");
 			return -1;
-		}
+		//}
 		return 0;
 	}
 	else

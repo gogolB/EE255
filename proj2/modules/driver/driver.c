@@ -23,6 +23,8 @@ static struct device* rsvdevDevice = NULL;
 
 static char message[1024] = {0};
 
+static DEFINE_MUTEX(driver_mutex);
+
 // Prototype functions for the character driver -- must come before struct defination
 static int 	dev_open(struct inode*, struct file *);
 static int 	dev_release(struct inode*, struct file *);
@@ -37,12 +39,13 @@ static struct file_operations fops =
 
 static int __init rsvdev_init(void){
 	printk(KERN_INFO "[RSVDEV] Initing rsvdevChar LKM\n");
-
+	mutex_lock(&driver_mutex);
 	// Try to allocate a major number dynamically
 	majorNumber = register_chrdev(0, DEVICE_NAME, &fops);
 	if(majorNumber < 0 )
 	{
 		printk(KERN_ALERT"[RSVDEV] Failed to get major number\n");
+		mutex_unlock(&driver_mutex);
 		return majorNumber;
 	}
 	printk(KERN_INFO"[RSVDEV] Registed with majornumber %d\n",majorNumber);
@@ -54,6 +57,7 @@ static int __init rsvdev_init(void){
 	{
 		unregister_chrdev(majorNumber, DEVICE_NAME);
 		printk(KERN_ALERT"[RSVDEV] Failed to create device class\n");
+		mutex_unlock(&driver_mutex);
 		return PTR_ERR(rsvdevClass);
 	}
 	printk(KERN_INFO"[RSVDEV] Device class was registered\n");
@@ -64,21 +68,27 @@ static int __init rsvdev_init(void){
 		class_destroy(rsvdevClass);
 		unregister_chrdev(majorNumber,  DEVICE_NAME);
 		printk(KERN_ALERT"[RSVDEV] Failed to create the device\n");
+		mutex_unlock(&driver_mutex);
 		return PTR_ERR(rsvdevDevice);
 	}
 	printk(KERN_INFO"[RSVDEV] Device created successfully\n");
 
+	mutex_unlock(&driver_mutex);
 	return 0;
 	
 }
 
 static void __exit rsvdev_exit(void)
-{
+{	
+	mutex_lock(&driver_mutex);
+	
 	device_destroy(rsvdevClass, MKDEV(majorNumber,0));
 	class_unregister(rsvdevClass);
 	class_destroy(rsvdevClass);
 	unregister_chrdev(majorNumber, DEVICE_NAME);
 	printk(KERN_INFO"[RSVDEV] LKM Removed\n");
+	
+	mutex_unlock(&driver_mutex);
 }
 
 static int dev_open(struct inode *inodep, struct file *fileptr)
@@ -91,6 +101,7 @@ static int dev_open(struct inode *inodep, struct file *fileptr)
 	
 	numberOpens++;
 	printk(KERN_INFO"[RSVDEV] Device has been opened\n");
+	mutex_lock(&driver_mutex);
 	return 0;
 }
 
@@ -131,6 +142,7 @@ static int dev_release(struct inode *inodep, struct file *fileptr)
 	{
 		printk(KERN_INFO"[RSVDEV] Device has been closed\n");
 		numberOpens--;
+		mutex_unlock(&driver_mutex);
 		return 0;
 	}
 	else
