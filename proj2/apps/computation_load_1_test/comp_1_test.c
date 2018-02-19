@@ -47,18 +47,17 @@ int main(void)
 {
 	struct timespec C, T;
 	struct timespec t1, t2, diff;
-	struct timespec req,rem;
 	
 	// Register sig int handler.
 	signal(SIGINT, intHandler);
 	signal(SIGUSR1, overflowHandler);	
 
 	req.tv_sec = 0;
-	req.tv_nsec = 80*MS_TO_NS;
+	req.tv_nsec = 20*MS_TO_NS;
 	int r;
 	// Test Set C to zero;
 	C.tv_sec = 0;
-	C.tv_nsec = 20*MS_TO_NS;
+	C.tv_nsec = 80*MS_TO_NS;
 
 	// Test Set T to zero;
 	T.tv_sec = 0;
@@ -67,6 +66,9 @@ int main(void)
 	// Set Reservation
 	r = syscall(397,0,&C,&T);
 	printf("Reservation set! r = %d\n", r);
+
+	C.tv_sec = 0;
+	C.tv_nsec = 50*MS_TO_NS;
 	
 	if(r == -1)
 	{

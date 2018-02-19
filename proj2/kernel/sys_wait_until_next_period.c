@@ -44,12 +44,10 @@ asmlinkage int sys_wait_until_next_period(void)
 		printk(KERN_ALERT"[WAIT_FOR_NEXT_PERIOD] Can not sleep, task not reserved\n");
 		return -1;
 	}
-
-	printk(KERN_INFO"[WAIT_FOR_NEXT_PERIOD] Sleeping PID: %u\n",current->pid);
 	set_current_state(TASK_INTERRUPTIBLE);	
 	printk(KERN_INFO"[WAIT_FOR_NEXT_PERIOD] Task is interruptable\n");
 	
-	time  = hrtimer_get_remaining(&current->hr_T_Timer->timer);
+	time  = hrtimer_get_remaining(&current->hr_T_Timer);
 	ts = ktime_to_timespec(time);
 	printk(KERN_INFO"[WAIT_FOR_NEXT_PERIOD] Time left on timer: %ld,%ld\n",ts.tv_sec, ts.tv_nsec);
 

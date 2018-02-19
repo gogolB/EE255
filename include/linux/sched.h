@@ -1647,13 +1647,13 @@ struct task_struct {
 
 	// Project 2 Components
 	char rsv_task;				// 1 - this is a reserved task
-	struct timespec *C, *T;
+	struct timespec C, T;
 	
 	struct timespec currentC;
 
 	spinlock_t sp_lock;//=SPIN_LOCK_UNLOCKED; 
-	struct hrtimer_sleeper *hr_C_Timer;
-	struct hrtimer_sleeper *hr_T_Timer;
+	struct hrtimer hr_C_Timer;
+	struct hrtimer hr_T_Timer;
 
 	int accumulate;
 

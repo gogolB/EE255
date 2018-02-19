@@ -71,7 +71,7 @@ void update_scheduler(void)
 		
 		if(i == 0)
 		{
-			currentPeriod = task->T;
+			currentPeriod = &task->T;
 		}
 		
 		// Get the old policy		
@@ -96,9 +96,9 @@ void update_scheduler(void)
 			continue;
 		}
 
-		if(C_lessthan_T(currentPeriod,task->T))
+		if(C_lessthan_T(currentPeriod,&task->T))
 		{
-			currentPeriod = task->T;
+			currentPeriod = &task->T;
 			high_priority--;
 		}
 		
@@ -177,15 +177,15 @@ void removeRsvTask(pid_t pid)
 enum hrtimer_restart hr_c_timer_callback(struct hrtimer * timer)
 {
 	// This regets the task
-	struct hrtimer_sleeper *hrs;
 	struct task_struct * task;
-	hrs = container_of(timer, struct hrtimer_sleeper, timer);
-	task = hrs->task;
+	task = container_of(timer, struct task_struct, hr_C_Timer);
+
 
 	task->currentC.tv_nsec += timer_c_granularity;
-	printk("C TIMER reached for PID: %u\n", task->pid);
+	//printk(KERN_ALERT"C TIMER reached for PID: %u\n", task->pid);
 	if(task->accumulate != 1)
 	{
+		//printk(KERN_ALERT"C TIMER NON_ACUM RESTART for PID: %u\n", task->pid);
 		hrtimer_forward_now(timer,ktime_set(0,timer_c_granularity));
 		return HRTIMER_RESTART;
 	}
@@ -194,66 +194,84 @@ enum hrtimer_restart hr_c_timer_callback(struct hrtimer * timer)
 	{
 
 		hrtimer_forward_now(timer,ktime_set(0,timer_c_granularity));
+		//printk(KERN_ALERT"C TIMER NORMAL RESTART for PID: %u\n", task->pid);
 		return HRTIMER_RESTART;
 	}
-	else
-	{
-		// More than 1 second worth of Nano seconds have passed, so update all the variables.
-		task->currentC.tv_sec += 1;
-		task->currentC.tv_nsec -= 1000*1000*1000;
-		hrtimer_forward_now(timer,ktime_set(0,timer_c_granularity));
-		return HRTIMER_RESTART;
-	}
+
+	// More than 1 second worth of Nano seconds have passed, so update all the variables.
+	task->currentC.tv_sec += 1;
+	task->currentC.tv_nsec -= 1000*1000*1000;
+	hrtimer_forward_now(timer,ktime_set(0,timer_c_granularity));
+	//printk(KERN_ALERT"C TIMER SECOND RESTART for PID: %u\n", task->pid);
+	return HRTIMER_RESTART;
+
 }
 
 enum hrtimer_restart hr_t_timer_callback(struct hrtimer *timer)
 {
 	int ret;
 	uint64_t t1, t2;
-
+	char wasActive = 0;
 	// This will reget the task.
-	struct hrtimer_sleeper *hrs;
 	struct task_struct * task;
-	hrs = container_of(timer, struct hrtimer_sleeper, timer);
-	task = hrs->task;
+	task = container_of(timer, struct task_struct, hr_T_Timer);
 
-	printk("T TIMER reached for PID: %u\n", task->pid);
+	if(!task)
+	{
+		printk(KERN_ALERT"T TIMER ERROR\n");
+		//hrtimer_forward_now(timer,ktime_set(task->T->tv_sec,task->T->tv_sec));
+		return HRTIMER_RESTART;
+	}
+
+
+	//printk(KERN_INFO"T TIMER reached for PID: %u\n", task->pid);
 
 	//spin_lock_irqsave(&task->sp_lock,flags);
 	// Stop the other C timer.
-	ret = hrtimer_cancel(&task->hr_C_Timer->timer);
-
+	if(hrtimer_active(&task->hr_C_Timer))
+	{
+		ret = hrtimer_cancel(&task->hr_C_Timer);
+		wasActive = 1;
+	}
 	// The task has overun its budget
-	if(C_lessthan_T(task->C,&task->currentC))
+	//printk(KERN_ALERT"T TIMER Checking C PID: %u\n", task->pid);
+	//printk(KERN_ALERT"T TIMER C is %ld,%ld\n", task->C->tv_sec,task->C->tv_nsec);
+	//printk(KERN_ALERT"T TIMER currentC is %ld,%ld\n", task->currentC.tv_sec,task->currentC.tv_nsec);
+	if(C_lessthan_T(&task->C,&task->currentC))
 	{
 		t1 = 1000*1000*1000*task->currentC.tv_sec + task->currentC.tv_nsec;
-		t2 = 1000*1000*1000*task->T->tv_sec + task->T->tv_nsec;
+		//printk(KERN_WARNING"T TIMER T is %ld,%ld\n", task->T->tv_sec,task->T->tv_nsec);
+		t2 = 1000*1000*1000*task->T.tv_sec + task->T.tv_nsec;
 	
-		printk("Task %s: budget overrun (util:%llu%%)\n", task->comm, lldiv(t1*100,t2));
+		printk(KERN_ALERT"Task %s: budget overrun (util:%llu%%)\n", task->comm, lldiv(t1*100,t2));
 		
-		// Send the signal. This will kill the process be default. 
-		//kill_pid(task_pid(task), SIGUSR1, 1);
+		// Send the signal. This will kill the process by default. 
+		kill_pid(task_pid(task), SIGUSR1, 1);
 	}
 
 	// Reset the Counter
+	//printk(KERN_ALERT"T TIMER Clearing C PID: %u\n", task->pid);
 	task->currentC.tv_sec = 0;
 	task->currentC.tv_nsec = 0;
 
 	// Restart the C timer.
-	hrtimer_forward_now(&task->hr_C_Timer->timer,hrtimer_cb_get_time(&task->hr_C_Timer->timer),ktime_set(0,timer_c_granularity));
-	hrtimer_restart(&task->hr_C_Timer->timer);	
+	//hrtimer_forward_now(&task->hr_C_Timer->timer,ktime_set(0,timer_c_granularity));
+	//printk(KERN_ALERT"T TIMER RESTARTING C PID: %u\n", task->pid);
+	if(wasActive)
+		hrtimer_restart(&task->hr_C_Timer);	
 	
 	// Wake up the task
-	printk("Task %s with PID:%u\n", task->comm, task->pid);
+	//printk(KERN_ALERT"Task %s with PID:%u\n", task->comm, task->pid);
 	ret = wake_up_process(task);
 	if(ret == 1)
-		printk("Process %s was woken up\n", task->comm);
+		printk(KERN_INFO"Process %s was woken up\n", task->comm);
 	else
-		printk("Process %s was up\n", task->comm);
+		printk(KERN_INFO"Process %s was up\n", task->comm);
 
 	//spin_unlock_irqrestore(&task->sp_lock,flags);
-	hrtimer_forward_now(timer,ktime_set(task->T->tv_sec,task->T->tv_nsec));
-	printk("Task %s: restarted, timer restarted\n", task->comm);
+	//printk(KERN_ALERT"FORWARDING FOR %ld,%ld\n",task->T.tv_sec,task->T.tv_sec);
+	hrtimer_forward_now(timer,ktime_set(task->T.tv_sec,task->T.tv_nsec));
+	//printk(KERN_ALERT"Task %s: restarted, timer restarted\n", task->comm);
 	return HRTIMER_RESTART;
 }
 
@@ -329,30 +347,29 @@ asmlinkage int sys_set_rsv(pid_t pid, struct timespec *C, struct timespec *T)
 	
 	printk(KERN_INFO"[RSV]Setting task to be reserved\n");
 	task->rsv_task = 1;
-	task->C = C;
-	task->T = T;
+	task->C.tv_sec = C->tv_sec;
+	task->C.tv_nsec = C->tv_nsec;
+	task->T.tv_sec = T->tv_sec;
+	task->T.tv_nsec = T->tv_nsec;
+	task->accumulate = 1;
 
 	printk(KERN_INFO"[RSV]Setting up task timers for PID: %u\n", target_pid);
 	
 	ktime_C = ktime_set(0, timer_c_granularity); 	// Run every 10 miliseconds.
 	ktime_T = ktime_set(T->tv_sec,T->tv_nsec);	// Run every T
 
-	task->hr_C_Timer = (struct hrtimer_sleeper *)kmalloc(sizeof(struct hrtimer_sleeper), GFP_KERNEL);
-	task->hr_T_Timer = (struct hrtimer_sleeper *)kmalloc(sizeof(struct hrtimer_sleeper), GFP_KERNEL);
-
+	
 	// Init the timer.
-	hrtimer_init(&task->hr_C_Timer->timer,CLOCK_MONOTONIC, HRTIMER_MODE_REL|HRTIMER_MODE_PINNED);
-	hrtimer_init(&task->hr_T_Timer->timer,CLOCK_MONOTONIC, HRTIMER_MODE_REL|HRTIMER_MODE_PINNED);
+	hrtimer_init(&task->hr_C_Timer,CLOCK_MONOTONIC, HRTIMER_MODE_REL);
+	hrtimer_init(&task->hr_T_Timer,CLOCK_MONOTONIC, HRTIMER_MODE_REL);
 	
 	// Set the call back functions
-	task->hr_C_Timer->timer.function = &hr_c_timer_callback;
-	task->hr_T_Timer->timer.function = &hr_t_timer_callback;
-	task->hr_C_Timer->task = task;
-	task->hr_T_Timer->task = task;
+	task->hr_C_Timer.function = &hr_c_timer_callback;
+	task->hr_T_Timer.function = &hr_t_timer_callback;
 
 	// Start the timers
-	hrtimer_start(&task->hr_C_Timer->timer, ktime_C, HRTIMER_MODE_REL|HRTIMER_MODE_PINNED);
-	hrtimer_start(&task->hr_T_Timer->timer, ktime_T, HRTIMER_MODE_REL|HRTIMER_MODE_PINNED);
+	hrtimer_start(&task->hr_C_Timer, ktime_C, HRTIMER_MODE_REL);
+	hrtimer_start(&task->hr_T_Timer, ktime_T, HRTIMER_MODE_REL);
 	printk(KERN_INFO"[RSV] Started task timers for PID: %u\n", target_pid);
 
 	// Start the other timer
@@ -391,11 +408,8 @@ asmlinkage int sys_cancel_rsv(pid_t pid)
 	if(task->rsv_task == 1)
 	{
 		// Stop the timers
-		hrtimer_cancel(&task->hr_C_Timer->timer);
-		hrtimer_cancel(&task->hr_T_Timer->timer);
-
-		kfree(task->hr_T_Timer);
-		kfree(task->hr_C_Timer);
+		hrtimer_cancel(&task->hr_C_Timer);
+		hrtimer_cancel(&task->hr_T_Timer);
 		
 		// Clear the flag.
 		task->rsv_task = 0;

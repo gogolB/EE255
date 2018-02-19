@@ -3406,7 +3406,8 @@ static void __sched notrace __schedule(bool preempt)
 		{
 			prev->accumulate = 0;
 			// Need to stop the timers for this particular task.
-			printk("[CORE]\n");
+			//printk(KERN_ALERT"[CORE] Stopping accumulater for PID:%u\n",prev->pid);
+			hrtimer_cancel(&prev->hr_C_Timer);
 		}		
 		
 
@@ -3414,7 +3415,8 @@ static void __sched notrace __schedule(bool preempt)
 		{
 			next->accumulate = 1;
 			// Restart the timers for this particular task.
-			printk("[CORE]\n");
+			//printk(KERN_ALERT"[CORE] Starting accumulater for PIUD: %u\n",next->pid);
+			hrtimer_restart(&next->hr_C_Timer);
 		}
 		rq = context_switch(rq, prev, next, cookie); /* unlocks the rq */
 				

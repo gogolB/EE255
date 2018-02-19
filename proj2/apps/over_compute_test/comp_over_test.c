@@ -3,8 +3,15 @@
 #include <asm/unistd.h>
 #include <time.h>
 #include <stdbool.h>
+#include <signal.h>
 
 #define MS_TO_NS 1000*1000
+
+static volatile int keepRunning = 1;
+void intHandler(int dummy)
+{
+	keepRunning = 0;
+}
 
 struct timespec timespec_diff(struct timespec *t1, struct timespec *t2)
 {
@@ -31,14 +38,22 @@ bool C_lessthan_T(struct timespec *C, struct timespec *T)
 		return C->tv_sec <= T->tv_sec; 
 }
 
+void overflowHandler()
+{
+	printf("I USED TOO MUCH TIME!\n");
+	//exit(-1);
+}
+
 
 int main(void)
 {
 	struct timespec C, T;
 	struct timespec t1, t2, diff;
-	struct timespec req,rem;
-	req.tv_sec = 0;
-	req.tv_nsec = 50*MS_TO_NS;
+
+	// Register sig int handler.
+	signal(SIGINT, intHandler);
+	signal(SIGUSR1, overflowHandler);
+
 	int r;
 	// Test Set C to zero;
 	C.tv_sec = 0;
@@ -52,7 +67,7 @@ int main(void)
 
 	// Set Reservation
 	r = syscall(397,0,&C,&T);
-	while (1) {
+	while (keepRunning) {
 		struct timespec t1, t2;
 		clock_gettime(CLOCK_THREAD_CPUTIME_ID, &t1);
 		while (1) 
