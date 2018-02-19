@@ -26,7 +26,7 @@ typedef struct {
 
 static tTuple rsv_tasks[50];
 
-static int num_rsv_tasks;
+static int num_rsv_tasks = 0;
 
 #define timer_c_granularity 10*1000*1000
 
