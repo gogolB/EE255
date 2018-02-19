@@ -104,7 +104,7 @@ static ssize_t dev_read(struct file *fileptr, char* buffer, size_t len, loff_t *
 	{
 		if(p->rsv_task == 1)
 		{
-			location += snprintf(message + location, 1024 - location, "%d\t%d\t%d\t%s\n",p->pid, p->tgid, p->prio, p->comm);
+			location += snprintf(message + location, 1024 - location, "%d\t%d\t%d\t%s\n",p->pid, p->tgid, p->rt_priority, p->comm);
 		}
 	} while_each_thread(g,p);
 	rcu_read_unlock();
