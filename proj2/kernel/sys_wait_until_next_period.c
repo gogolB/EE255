@@ -16,7 +16,8 @@ asmlinkage int sys_wait_until_next_period(void)
 	}
 	printk(KERN_INFO"[WAIT_FOR_NEXT_PERIOD] Sleeping PID: %u\n",current->pid);
 	printk(KERN_INFO"[WAIT_FOR_NEXT_PERIOD] Task is sleeping interruptable\n");
-	set_current_state(TASK_PARKED);
+	set_current_state(TASK_INTERRUPTIBLE);
 	schedule();
+	set_current_state(TASK_RUNNING);
 	return 0;
 }
