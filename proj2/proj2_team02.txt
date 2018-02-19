@@ -7,10 +7,13 @@
 	a.) No points are lost. The data is generated at 1 point per millisecond which gives Dexter's syscall enough
 	    time to complete before new data arrives.
 
-	b.) Data is now generated at 1us. Approximately 99% of data is lost due to overhead delay. Assuming it takes 50us to
-	    get from user space to kernel space, the first 50 points are lost. the 51st point will be copied due to the 1ns
-    	    copy time. After, another 50 points will be lost. This ycle repeats.
+	b.) Data is now generated at 10us. It takes 100.01us to get one data point. In this time, 10 data points are lost to 
+	    overhead. That is ~91% of data is lost. 
 
-	c.)
+	c.) Data is still generated at 10us and stored in a 1000pt buffer. There is no latency associated with the buffer.
+	    The syscall reads the buffer once full. Getting data from kernel to userspace takes 100us + (1000 * 10ns) = 
+	    110us. This causes 11 data points to be lost. Therefore 11 of 1011 ~ 1.1% of points are lost to overhead.
 
-	d.)
+	d.) An easy solution is to drop the data rate, but that's probably not what Dexter wants. He could include a second
+	    buffer of length 11 to catch the points that roll over from the implementation in 'C'. His syscall would need
+	    to check how full the primary buffer is; once the buffer is full, start writing to the secondary buffer.
