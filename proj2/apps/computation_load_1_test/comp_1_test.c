@@ -52,8 +52,7 @@ int main(void)
 	signal(SIGINT, intHandler);
 	signal(SIGUSR1, overflowHandler);	
 
-	req.tv_sec = 0;
-	req.tv_nsec = 20*MS_TO_NS;
+
 	int r;
 	// Test Set C to zero;
 	C.tv_sec = 0;
@@ -85,11 +84,11 @@ int main(void)
 			diff = timespec_diff(&t1,&t2);
 			if (!C_lessthan_T(&diff,&C)) 
 				break;
-			printf("Diff: %d,%d\n",diff.tv_sec, diff.tv_nsec);
+			//printf("Diff: %d,%d\n",diff.tv_sec, diff.tv_nsec);
 		}
 		// Wait for next period
 		r = syscall(399);
-		printf("value of r = %d\n", r);
+		//printf("value of r = %d\n", r);
 	}
 
 	return 0;

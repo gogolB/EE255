@@ -40,7 +40,7 @@ bool C_lessthan_T(struct timespec *C, struct timespec *T)
 
 void overflowHandler()
 {
-	printf("I USED TOO MUCH TIME!\n");
+	//printf("I USED TOO MUCH TIME!\n");
 	//exit(-1);
 }
 
