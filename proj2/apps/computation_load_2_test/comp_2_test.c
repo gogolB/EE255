@@ -5,13 +5,12 @@
 #include <stdbool.h>
 #include <signal.h>
 
-#define MS_TO_NS 1000*1000
-
 static volatile int keepRunning = 1;
 void intHandler(int dummy)
 {
 	keepRunning = 0;
 }
+#define MS_TO_NS 1000*1000
 
 struct timespec timespec_diff(struct timespec *t1, struct timespec *t2)
 {
@@ -40,33 +39,42 @@ bool C_lessthan_T(struct timespec *C, struct timespec *T)
 
 void overflowHandler()
 {
-	//printf("I USED TOO MUCH TIME!\n");
+	printf("I USED TOO MUCH TIME!\n");
 	//exit(-1);
 }
-
 
 int main(void)
 {
 	struct timespec C, T;
 	struct timespec t1, t2, diff;
-
+	
 	// Register sig int handler.
 	signal(SIGINT, intHandler);
-	signal(SIGUSR1, overflowHandler);
+	signal(SIGUSR1, overflowHandler);	
+
 
 	int r;
 	// Test Set C to zero;
 	C.tv_sec = 0;
-	C.tv_nsec = 20*MS_TO_NS;
+	C.tv_nsec = 80*MS_TO_NS;
 
 	// Test Set T to zero;
 	T.tv_sec = 0;
-	T.tv_nsec = 200*MS_TO_NS;
-
-	C.tv_nsec = 50*MS_TO_NS;
+	T.tv_nsec = 500*MS_TO_NS;
 
 	// Set Reservation
 	r = syscall(397,0,&C,&T);
+	printf("Reservation set! r = %d\n", r);
+
+	C.tv_sec = 0;
+	C.tv_nsec = 50*MS_TO_NS;
+	
+	if(r == -1)
+	{
+		printf("Failed to set reservation\n");
+		return -1;
+	}
+	
 	while (keepRunning) {
 		struct timespec t1, t2;
 		clock_gettime(CLOCK_THREAD_CPUTIME_ID, &t1);
@@ -74,12 +82,13 @@ int main(void)
 		{
 			clock_gettime(CLOCK_THREAD_CPUTIME_ID, &t2);
 			diff = timespec_diff(&t1,&t2);
-			if (!C_lessthan_T(&diff , &C)) 
+			if (!C_lessthan_T(&diff,&C)) 
 				break;
+			//printf("Diff: %d,%d\n",diff.tv_sec, diff.tv_nsec);
 		}
-		
 		// Wait for next period
 		r = syscall(399);
+		//printf("value of r = %d\n", r);
 	}
 
 	return 0;
