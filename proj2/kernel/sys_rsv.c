@@ -124,7 +124,7 @@ void update_scheduler(void)
 // Assume the list is already organized.
 void addRsvTask(pid_t pid, struct timespec *T)
 {
-	int index = 0;
+	int index = num_rsv_tasks;
 	int i;
 	mutex_lock(&rsv_task_mutex);
 	// Find the index to insert at
@@ -136,7 +136,7 @@ void addRsvTask(pid_t pid, struct timespec *T)
 			break;
 		}
 	}
-	//printk(KERN_ALERT"Index for new task %d\n",index);
+	printk(KERN_ALERT"Index for new task %d\n",index);
 
 	// Shift everything down by one.
 	for(i = index; i < num_rsv_tasks;i++)
