@@ -136,7 +136,7 @@ void addRsvTask(pid_t pid, struct timespec *T)
 			break;
 		}
 	}
-	printk(KERN_ALERT"Index for new task %d\n",index);
+	printk(KERN_ALERT"Index for new PID(%u) is %d\n",pid,index);
 
 	// Shift everything down by one.
 	for(i = index; i < num_rsv_tasks;i++)
@@ -266,8 +266,11 @@ enum hrtimer_restart hr_t_timer_callback(struct hrtimer *timer)
 	//printk(KERN_ALERT"T TIMER currentC is %ld,%ld\n", task->currentC.tv_sec,task->currentC.tv_nsec);
 	if(C_lessthan_T(&task->C,&task->currentC))
 	{
+		// Convert to NS
 		t1 = 1000*1000*1000*task->currentC.tv_sec + task->currentC.tv_nsec;
-		//printk(KERN_WARNING"T TIMER T is %ld,%ld\n", task->T->tv_sec,task->T->tv_nsec);
+		//printk(KERN_ALERT"Current C is %ld,%ld\n", task->currentC.tv_sec,task->currentC.tv_nsec);
+		
+		// Convert to NS		
 		t2 = 1000*1000*1000*task->T.tv_sec + task->T.tv_nsec;
 	
 		printk(KERN_ALERT"Task %s: budget overrun (util:%llu%%)\n", task->comm, lldiv(t1*100,t2));
