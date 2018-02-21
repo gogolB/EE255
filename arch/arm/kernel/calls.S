@@ -410,6 +410,8 @@
 		CALL(sys_set_rsv)     			// Call number 397 for Proj2
 		CALL(sys_cancel_rsv)  			// Call number 398 for Proj2
 		CALL(sys_wait_until_next_period) 	// Call number 399 for Proj2
+		CALL(sys_show_segment_info)		// Call number 400 for Proj3
+		CALL(sys_show_vm_areas)			// Call number 401 for Proj3
 #ifndef syscalls_counted
 .equ syscalls_padding, ((NR_syscalls + 3) & ~3) - NR_syscalls
 #define syscalls_counted

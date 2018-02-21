@@ -3,7 +3,7 @@
 #include <linux/pid.h>
 
 
-asmlinkage int sys_show_segment_info(int pid)
+asmlinkage int sys_show_vm_areas(int pid)
 {
 	return -1;
 }

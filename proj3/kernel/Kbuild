@@ -1,2 +1,2 @@
-
 obj-y += segment_info.o
+obj-y += vm_areas.o

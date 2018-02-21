@@ -427,6 +427,8 @@
 #define __NR_set_rsv			(__NR_SYSCALL_BASE+397)  // Proj2
 #define __NR_cancel_rsv			(__NR_SYSCALL_BASE+398)  // Proj2
 #define __NR_WAIT_UNTIL_NEXT_PERIOD	(__NR_SYSCALL_BASE+399)  // Proj2
+#define __NR_SHOW_SEGEMENT_INFO		(__NR_SYSCALL_BASE+400)	 // Proj3
+#define __NR_SHOW_VM_AREAS		(__NR_SYSCALL_BASE+401)  // Proj3
 /*
  * The following SWIs are ARM private.
  */
