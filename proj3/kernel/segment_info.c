@@ -34,7 +34,7 @@ asmlinkage int sys_show_segment_info(int pid)
 	
 	task = (struct task_struct*)pid_task(pid_struct,PIDTYPE_PID);
 	
-	mmp = task->mm;
+	mmp = task->active_mm;
 
 	printk(KERN_INFO"[Memory segment addresses of process %u]\n",target_pid);
 	printk(KERN_INFO"%#010lx - %#010lx: code segment\n",mmp->start_code, mmp->end_code);

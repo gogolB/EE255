@@ -33,19 +33,21 @@ asmlinkage int sys_show_vm_areas(int pid)
 	}	
 	
 	task = (struct task_struct*)pid_task(pid_struct,PIDTYPE_PID);
-
+	mmp = task->active_mm;
 	printk(KERN_INFO"[Memory-maped areas of process %u]\n",target_pid);
 	// Go through all the VM_Structs
 	vmp = mmp->mmap;
 	while(1)
 	{
-		printk(KERN_INFO"%#010lx - %#010lx: %lu bytes",vmp->vm_start, vmp->vm_end, vmp->vm_end - vmp->vm_start);
 		// Check if it is locked
 		if((vmp->vm_flags & VM_LOCKED) == VM_LOCKED)
 		{
-			printk(" [L]");
+			printk(KERN_INFO"%#010lx - %#010lx: %lu bytes [L]\n",vmp->vm_start, vmp->vm_end, vmp->vm_end - vmp->vm_start);
 		}
-		printk("\n");
+		else
+		{
+			printk(KERN_INFO"%#010lx - %#010lx: %lu bytes\n",vmp->vm_start, vmp->vm_end, vmp->vm_end - vmp->vm_start);
+		}
 			
 		
 		// Go to the next VMA		

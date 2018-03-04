@@ -58,7 +58,8 @@ int main(int argc, char * argv[])
 	diff = timespec_diff(&t1, &t2);
 
 	printf("Access time: %ldns\n",(diff.tv_sec*1000000000 + diff.tv_nsec));
-	
+	syscall(400,0);
+	syscall(401,0);
 	munlockall();
 	free(buff);
 }
