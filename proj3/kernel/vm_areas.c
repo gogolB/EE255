@@ -12,6 +12,16 @@ asmlinkage int sys_show_vm_areas(int pid)
 	
 	struct mm_struct *mmp;
 	struct vm_area_struct *vmp;
+
+	unsigned long ptr;
+	unsigned int count;
+
+	pgd_t *pgd;
+	pud_t *pud;
+	pmd_t *pmd;
+
+	spinlock_t *ptl;
+	pte_t *ptep, pte;
 	
 	// Set the target PID.
 	if(pid == 0)
@@ -39,15 +49,47 @@ asmlinkage int sys_show_vm_areas(int pid)
 	vmp = mmp->mmap;
 	while(1)
 	{
+
+		ptr = vmp->vm_start;
+		count = 0;
+		while(ptr < vmp->vm_end)
+		{
+			pgd = pgd_offset(mmp, ptr);
+			if (pgd_none(*pgd) || unlikely(pgd_bad(*pgd)))
+				break;
+
+			pud = pud_offset(pgd, ptr);
+			if (pud_none(*pud) || unlikely(pud_bad(*pud)))
+				break;
+
+			pmd = pmd_offset(pud, ptr);
+			VM_BUG_ON(pmd_trans_huge(*pmd));
+			if (pmd_none(*pmd) || unlikely(pmd_bad(*pmd)))
+				break;
+			
+			ptep = pte_offset_map_lock(mmp, pmd, ptr, &ptl);
+			pte = *ptep;
+			
+			if (pte_present(pte)) {
+				count++;
+			}
+			pte_unmap_unlock(ptep, ptl);
+
+			// Go across page by page.
+			ptr += 4096;
+		}		
+		
+
 		// Check if it is locked
 		if((vmp->vm_flags & VM_LOCKED) == VM_LOCKED)
 		{
-			printk(KERN_INFO"%#010lx - %#010lx: %lu bytes [L]\n",vmp->vm_start, vmp->vm_end, vmp->vm_end - vmp->vm_start);
+			printk(KERN_INFO"%#010lx - %#010lx: %lu bytes [L], %d pages in physical memory\n",vmp->vm_start, vmp->vm_end, vmp->vm_end - vmp->vm_start, count);
 		}
 		else
 		{
-			printk(KERN_INFO"%#010lx - %#010lx: %lu bytes\n",vmp->vm_start, vmp->vm_end, vmp->vm_end - vmp->vm_start);
+			printk(KERN_INFO"%#010lx - %#010lx: %lu bytes, %d pages in physical memory\n",vmp->vm_start, vmp->vm_end, vmp->vm_end - vmp->vm_start, count);
 		}
+
 			
 		
 		// Go to the next VMA		
