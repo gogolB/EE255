@@ -57,7 +57,7 @@ int main(int argc, char * argv[])
 	clock_gettime(CLOCK_REALTIME, &t2);
 	diff = timespec_diff(&t1, &t2);
 
-	printf("Access time: %lldns\n",(diff.tv_sec*1000000000 + diff.tv_nsec));
+	printf("Access time: %ldns\n",(diff.tv_sec*1000000000 + diff.tv_nsec));
 	
 	munlockall();
 	free(buff);
