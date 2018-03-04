@@ -1,0 +1,14 @@
+1) The function 'mlockall(MCL_CURRENT | MCL_FUTURE)' will lock all pages mapped in to the address space of the calling process. THis incudes the pages of the code,data, and stack segment. MCL_FUTURE will will lock all pages that will become mapped in to the address space of the process in the future. (Any new pages created by calling malloc.
+
+2)      | malloc time		| malloc lock time	|
+---------------------------------------------------------
+100KB	| 125041.6 ns		| 3071.4 ns		|
+---------------------------------------------------------
+1MB	| 1472625.2 ns		| 21135.2 ns		|
+---------------------------------------------------------
+10MB	| 16620201 ns		| 202933.6 ns		|
+---------------------------------------------------------
+100MB	| 132162979.4 ns	| 1641760.2 ns		|
+---------------------------------------------------------
+
+3) A simple tactic can be to access the pages of memory on a timer to refresh the "demand" for that page inorder to prevent it from being reclaimed. Another approach can be to use double buffering so that one buffer is constantly being read from and the other is constantly being written to. When the time comes to swich the reading process blocks on the writing process. When the writing process finishes the read buffer pointer and the write buffer pointer switch places and the process continues.
