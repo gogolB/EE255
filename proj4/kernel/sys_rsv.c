@@ -11,6 +11,7 @@
 #include <linux/jiffies.h>
 #include <linux/slab.h>
 #include "sys_rsv.h"
+#include <linux/cpumask.h>
 
 
 #define UINT64 long long int 
@@ -37,6 +38,8 @@ asmlinkage int sys_set_rsv(pid_t pid, struct timespec *C, struct timespec *T, in
 	pid_t target_pid;
 	struct task_struct *task;
 	struct pid *pid_struct;
+	cpumask_t cpu_set;
+	int returnValue;
 
 	// Check all the params for nulls
 	if(C == NULL || T == NULL)
@@ -119,8 +122,15 @@ asmlinkage int sys_set_rsv(pid_t pid, struct timespec *C, struct timespec *T, in
 	task->T.tv_sec = T->tv_sec;
 	task->T.tv_nsec = T->tv_nsec;
 
-	
-
+	// Set the CPU Affinity
+	cpumask_clear(&cpu_set);
+	cpumask_set_cpu(cpuid, &cpu_set);
+	returnValue = sched_setaffinity(target_pid, &cpu_set);
+	if(returnValue != 0)
+	{
+		printk(KERN_ALERT"[RSV] Failed to set Affinity. Error code: %d\n", returnValue);
+		return -1;
+	}
 	return 0;
 }
 
