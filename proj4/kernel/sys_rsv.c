@@ -23,20 +23,6 @@ static inline uint64_t lldiv(uint64_t dividend, uint32_t divisor)
     return(__res);
 }
 
-static DEFINE_MUTEX(rsv_task_mutex);
-
-typedef struct {
-	pid_t pid;
-	struct timespec T;
-} tTuple; 
-
-
-static tTuple rsv_tasks[50];
-
-static int num_rsv_tasks = 0;
-
-#define timer_c_granularity 10*1000*1000
-
 bool C_lessthan_T(struct timespec *C, struct timespec *T)
 {
 	if(C->tv_sec == T->tv_sec)
@@ -51,9 +37,6 @@ asmlinkage int sys_set_rsv(pid_t pid, struct timespec *C, struct timespec *T, in
 	pid_t target_pid;
 	struct task_struct *task;
 	struct pid *pid_struct;
-
-	ktime_t ktime_T;
-	ktime_t ktime_C;
 
 	// Check all the params for nulls
 	if(C == NULL || T == NULL)
@@ -84,7 +67,11 @@ asmlinkage int sys_set_rsv(pid_t pid, struct timespec *C, struct timespec *T, in
 		return -1;
 	}
 
-	if()
+	if(cpuid < 0 || cpuid > 3)
+	{
+		printk(KERN_ALERT"[RSV] CPUID %d is not a valid CPUID. Please pick a CPUID between 0 and 3\n", cpuid);
+		return -1;
+	}
 
 
 	// Set the target PID.
@@ -117,14 +104,22 @@ asmlinkage int sys_set_rsv(pid_t pid, struct timespec *C, struct timespec *T, in
 		// Can not reserve a task that is already reserved.
 		printk(KERN_ALERT"[RSV] This task is already reserved. PID: %u\n",target_pid);
 		return -1;
-	}		
+	}
+
+	
+	// After this point we can assume that the task is good and can be reserved.		
 	
 	printk(KERN_INFO"[RSV]Setting task to be reserved\n");
+	// Set the flag for reservation
 	task->rsv_task = 1;
+	
+	// Set all the C and T Values.
 	task->C.tv_sec = C->tv_sec;
 	task->C.tv_nsec = C->tv_nsec;
 	task->T.tv_sec = T->tv_sec;
 	task->T.tv_nsec = T->tv_nsec;
+
+	
 
 	return 0;
 }
@@ -134,8 +129,6 @@ asmlinkage int sys_cancel_rsv(pid_t pid)
 	pid_t target_pid;
 	struct task_struct *task;
 	struct pid *pid_struct;
-	int status;
-	struct sched_param param;
 
 	if(pid == 0)
 	{
@@ -163,6 +156,7 @@ asmlinkage int sys_cancel_rsv(pid_t pid)
 		// Clear the flag.
 		task->rsv_task = 0;
 		printk(KERN_INFO"[RSV] Rsv canceled for PID: %u\n",target_pid);
+		return 0;
 	}
 	else
 	{

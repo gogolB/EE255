@@ -1,2 +1,1 @@
-obj-y += sys_rsv.o
 obj-y += sys_wait_until_next_period.o

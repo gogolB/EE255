@@ -54,7 +54,7 @@
 #include <linux/writeback.h>
 #include <linux/shm.h>
 #include <linux/kcov.h>
-#include <../proj2/kernel/sys_rsv.h>
+#include <../proj4/kernel/sys_rsv.h>
 
 #include <asm/uaccess.h>
 #include <asm/unistd.h>
@@ -779,11 +779,9 @@ void __noreturn do_exit(long code)
 	
 	if(tsk->rsv_task == 1)
 	{
-		//printk(KERN_ALERT"PID: %d was rsv'd and now is canceling.\n", tsk->pid);
-		hrtimer_cancel(&tsk->hr_C_Timer);
-		hrtimer_cancel(&tsk->hr_T_Timer);
+
 		tsk->rsv_task = 0;
-		removeRsvTask(tsk->pid);
+		sys_cancel_rsv(tsk->pid);
 		printk(KERN_INFO"PID: %d was rsv'd and now is canceled.\n", tsk->pid);	
 	}
 

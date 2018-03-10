@@ -3402,22 +3402,22 @@ static void __sched notrace __schedule(bool preempt)
 		
 	
 		// Project 2 Specific
-		if(prev->rsv_task == 1)
-		{
-			prev->accumulate = 0;
+		//if(prev->rsv_task == 1)
+		//{
+			//prev->accumulate = 0;
 			// Need to stop the timers for this particular task.
 			//printk(KERN_ALERT"[CORE] Stopping accumulater for PID:%u\n",prev->pid);
-			hrtimer_cancel(&prev->hr_C_Timer);
-		}		
+			//hrtimer_cancel(&prev->hr_C_Timer);
+		//}		
 		
 
-		if(next->rsv_task == 1)
-		{
-			next->accumulate = 1;
+		//if(next->rsv_task == 1)
+		//{
+			//next->accumulate = 1;
 			// Restart the timers for this particular task.
 			//printk(KERN_ALERT"[CORE] Starting accumulater for PIUD: %u\n",next->pid);
-			hrtimer_restart(&next->hr_C_Timer);
-		}
+			//hrtimer_restart(&next->hr_C_Timer);
+		//} 
 		rq = context_switch(rq, prev, next, cookie); /* unlocks the rq */
 				
 
