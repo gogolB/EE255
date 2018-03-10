@@ -3,15 +3,10 @@
 #include <linux/sched.h>
 #include <linux/pid.h>
 #include <linux/ktime.h>
-#include <linux/hrtimer.h>
-#include <linux/mutex.h>
-#include <linux/spinlock.h>
-#include <linux/timer.h>
 #include <linux/init.h>
-#include <linux/jiffies.h>
-#include <linux/slab.h>
-#include "sys_rsv.h"
 #include <linux/cpumask.h>
+
+#include "sys_rsv.h"
 
 
 #define UINT64 long long int 
