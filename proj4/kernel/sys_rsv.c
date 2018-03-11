@@ -12,13 +12,50 @@
 
 #define UINT64 long long int 
 #define UINT32 long int 
-
+// ******************************************************************************************************************************************************************
 // Please note that there should be one CPU_Head per cpu.
 // This linklist is sorted in accending order of T.
 struct task_time* CPU_Head[CPU_C];
 
 static char setup = 0;
 
+static int task_partitioning_heuristic = BEST_FIT;
+// ******************************************************************************************************************************************************************
+int rsv_getPolicy(void)
+{
+	return task_partitioning_heuristic;
+}
+
+int rsv_setPolicy(int newPolicy)
+{
+	if(newPolicy != BEST_FIT || newPolicy != WORST_FIT || newPolicy != FIRST_FIT)
+	{
+		printk(KERN_WARNING"[RSV] Tried to set invalid policy. (%d)\n", newPolicy);
+		return -1;
+	}
+	else
+	{
+		task_partitioning_heuristic = newPolicy;
+
+		switch(newPolicy)
+		{
+			case BEST_FIT:
+				printk(KERN_INFO"[RSV] Task Part Policy set to: BEST FIT\n");				
+				break;
+
+			case WORST_FIT:
+				printk(KERN_INFO"[RSV] Task Part Policy set to: WORST FIT\n");				
+				break;
+
+			case FIRST_FIT:
+				printk(KERN_INFO"[RSV] Task Part Policy set to: FIRST FIT\n");				
+				break;
+		}
+
+		return 0;
+	}
+}
+// ******************************************************************************************************************************************************************
 static inline uint64_t lldiv(uint64_t dividend, uint32_t divisor)
 {
     uint64_t __res = dividend;
@@ -46,6 +83,8 @@ long long int div_with_ceil(long long int x, long long int y)
 	else
 		return lldiv(x + y - 1 , y);
 }
+
+// ******************************************************************************************************************************************************************
 
 static inline int RTT(int cpuid, struct timespec *C, struct timespec *T)
 {
@@ -94,6 +133,7 @@ static inline int RTT(int cpuid, struct timespec *C, struct timespec *T)
 		// R_(K+1) = C + Sum Of HP Tasks.
 		R_next = C->tv_nsec + sumOfHPTasks;
 
+		// Break condition.
 		if (R_next == R)
 			break;
 		else
@@ -236,6 +276,15 @@ static inline void removeFromLinkList(int cpuid, pid_t pid)
 }
 
 
+// ******************************************************************************************************************************************************************
+// Stub Function. TODO: Finish this function.
+int findCPU(pid_t pid, struct timespec *C, struct timespec *T)
+{
+	return -1;
+}
+
+
+// ******************************************************************************************************************************************************************
 asmlinkage int sys_set_rsv(pid_t pid, struct timespec *C, struct timespec *T, int cpuid)
 {
 	pid_t target_pid;
