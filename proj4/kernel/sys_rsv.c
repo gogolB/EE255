@@ -9,9 +9,12 @@
 
 #include "sys_rsv.h"
 
+// included for sorting
+//#include <algorithm>
 
 #define UINT64 long long int 
 #define UINT32 long int 
+
 // ******************************************************************************************************************************************************************
 // Please note that there should be one CPU_Head per cpu.
 // This linklist is sorted in accending order of T.
@@ -275,11 +278,82 @@ static inline void removeFromLinkList(int cpuid, pid_t pid)
 	}
 }
 
-
+// Here's our insertion sort algorithm
+// http://cforbeginners.com/insertionsort.html
+void sortUtils(int unsorted[][2], int length)
+{
+	int i,j, temp1, temp2;
+		
+	for (i = 0; i < length; i++)
+	{
+		j = i;
+		
+		while (j > 0 && unsorted[j][1] < unsorted[j-1][1])
+		{
+			temp1 = unsorted[j][1];
+			temp2 = unsorted[j][2];
+			unsorted[j][1] = unsorted[j-1][1];
+			unsorted[j][2] = unsorted[j-1][2];
+			unsorted[j-1][1] = temp1;
+			unsorted[j-1][2] = temp2;
+			j--;
+		}
+	}
+}
 // ******************************************************************************************************************************************************************
 // Stub Function. TODO: Finish this function.
 int findCPU(pid_t pid, struct timespec *C, struct timespec *T)
 {
+	int util; 
+	int totalUtil;
+
+	int cpuid;
+
+	int numPossibleCores = 0;
+	int high = 0;
+	int i;
+	struct task_time *tt;
+	// Array to contain Utils of all CPUs and associated core number. Makes sorting easier.
+	int CPUutils[4][2];
+	// Array containing sorted <util,cpu> pairs
+	//int CPUsorted[4][2];
+	// Calculate util needed for new task
+	util = getUtil(C,T);
+	// Calculate utils of all cores and store in array CPUutils
+	for(cpuid = 0;cpuid <= 3; cpuid++)
+	{
+		totalUtil = 0;	
+		tt = CPU_Head[cpuid];
+		while(tt != NULL)
+		{
+			totalUtil += tt->util;
+		}
+		CPUutils[cpuid][1] = totalUtil;
+		CPUutils[cpuid][2] = cpuid;
+		// Check if CPU(cpuid) can handle new task
+		if(totalUtil+util <= 100)
+		{
+			numPossibleCores++;
+		}
+		
+	}
+	// We now have an array of bools that show which cores (if any) can handle the new task
+	// First, we shoud determine if any cores could schedule the task
+	if(numPossibleCores <= 0)
+		return -1;
+	// This means we have at least one core
+	// Sort utils in ascending order(stack exchange solution) := CPUutils
+	//std::sortUtils(CPUutils,CPUutils + 4,comparator)
+	sortUtils(CPUutils,4);   //******************************UNCOMMENT THSI LINE
+	// Now, start from the end of this array (position 3) and decrement until (3 - numPossibleCores)
+	high = 0 + numPossibleCores - 1;
+	for(i = 0; i <= high; i++)
+	{
+		cpuid = CPUutils[i][2];
+		if(canRunOnCPU(pid,cpuid,C,T))
+			return cpuid;
+	}
+	// We didn't find an available CPU
 	return -1;
 }
 
@@ -376,6 +450,12 @@ asmlinkage int sys_set_rsv(pid_t pid, struct timespec *C, struct timespec *T, in
 
 	if(cpuid == -1)
 	{
+                // Accept a new task iff partitioning heuristic is able to successfully allocate the 
+		// new task to a CPU core. Allocation successful iff all tasks of target CPU core are 
+		// guaranteed to be schedulable by rtt.
+		// Use "Best-Fit" as partition heuristic. Find core with min remaining space among 
+		// cores that can schedule task.
+		
 		printk(KERN_ALERT"[RSV] Feature unsupported, please pick a valid CPUID [0, 3]\n");
 		return -1;
 	}
