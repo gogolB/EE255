@@ -455,9 +455,12 @@ asmlinkage int sys_set_rsv(pid_t pid, struct timespec *C, struct timespec *T, in
 		// guaranteed to be schedulable by rtt.
 		// Use "Best-Fit" as partition heuristic. Find core with min remaining space among 
 		// cores that can schedule task.
-		
-		printk(KERN_ALERT"[RSV] Feature unsupported, please pick a valid CPUID [0, 3]\n");
-		return -1;
+		targetCPUID = findCPU(pid,C,T);
+		if(targetCPUID == -1)
+		{
+			printk(KERN_ALERT"[RSV] Feature unsupported, please pick a valid CPUID [0, 3]\n");
+			return -1;
+		}
 	}
 	else
 	{
