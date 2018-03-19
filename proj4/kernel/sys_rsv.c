@@ -91,6 +91,32 @@ long long int div_with_ceil(long long int x, long long int y)
 		return lldiv(x + y - 1 , y);
 }
 
+void printCPUTaskList(int cpuid)
+{
+	struct task_time *tt;
+	long long int util, totalUtil;
+	printk(KERN_INFO"[RSV-DEBUG] Printing All Tasks on CPU %d PID\t(C,T)\tUtil\n", cpuid);
+	if(CPU_Head[cpuid] == NULL)
+	{
+		printk(KERN_INFO"[RSV-DEBUG] No Tasks On this CPU\n");
+	}
+	else
+	{
+		totalUtil = 0;
+		tt = CPU_Head[cpuid];
+		while(tt != NULL)
+		{
+			util = getUtil(&tt->C, &tt->T);
+			printk(KERN_INFO"[RSV-DEBUG] %u\t(%ld, %ld)\t%lld\n", tt->pid, tt->C.tv_nsec, tt->T.tv_nsec, util);
+			
+			totalUtil += util;
+			
+			tt = tt->next;
+		}
+		printk(KERN_INFO"[RSV-DEBUG] CPU %d CURRENT UTIL: %lld", cpuid, totalUtil);
+	}
+}
+
 // ******************************************************************************************************************************************************************
 
 static int RTT(int cpuid, struct timespec *C, struct timespec *T)
