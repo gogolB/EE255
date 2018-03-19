@@ -243,6 +243,24 @@ int canRunOnCPU(pid_t pid, int cpuid, struct timespec *C, struct timespec *T)
 			// We got to the end, add it to the end.
 			tts->next = tt;
 			tt->prev = tts;
+
+			printk(KERN_INFO"[RSV] PID %u and has been added to reservation on CPU: %d. Checking all task.\n", pid, cpuid);
+			tts = CPU_Head[cpuid];
+			while(tts != NULL)
+			{
+				if(RTT(cpuid, &tts->C, &tts->T) == 1)
+					tts = tts->next;
+				else
+				{
+					printk(KERN_INFO"[RSV] PID %u failed checking RTT of all other tasks on CPU: %d.\n", pid, cpuid);
+					// One of the earlier tasks failed the RTT.
+					sys_cancel_rsv(pid);
+					return 0;
+
+				}
+			
+			}
+			
 			return 1;
 		}
 
@@ -264,7 +282,8 @@ static inline void removeFromLinkList(int cpuid, pid_t pid)
 		{
 			// We found what we were looking for.
 			// Set the previous one's next to this one.
-			tt->prev->next = tt->next;
+			if(tt->prev != NULL) // Deals with head node issue.
+				tt->prev->next = tt->next;
 			
 			// Remove this one
 			kfree(tt);
