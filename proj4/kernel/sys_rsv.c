@@ -93,7 +93,7 @@ long long int div_with_ceil(long long int x, long long int y)
 
 // ******************************************************************************************************************************************************************
 
-static inline int RTT(int cpuid, struct timespec *C, struct timespec *T)
+static int RTT(int cpuid, struct timespec *C, struct timespec *T)
 {
 	int util; 
 	int totalUtil;
@@ -106,6 +106,8 @@ static inline int RTT(int cpuid, struct timespec *C, struct timespec *T)
 
 	// Get the util
 	util = getUtil(C,T);
+	printk(KERN_INFO"Running RTT on CPU %d with (%lld, %lld) and util %d\n", cpuid, C->tv_nsec, T->tv_nsec, util);
+
 
 	// First check total util
 	totalUtil = 0;	
@@ -116,18 +118,23 @@ static inline int RTT(int cpuid, struct timespec *C, struct timespec *T)
 			numOfHPTasks++;
 		
 		totalUtil += tt->util;
+		tt = tt->next;
 	}
 	
 	// Utilization is above 100% can't schedule.
 	if((totalUtil + util) > 100)
+	{
+		printk(KERN_WARN"Utilization on this CPU would be over 100%, can't schedule\n");
 		return 0;
-
+	}
 	// Utilization is below 100% which means we need to run the RTT
+	printk(KERN_INFO"Util on CPU %d is %d", cpuid, totalUtil);
 
 	// R0 = C;
 	R = C->tv_nsec;
 	tt = CPU_Head[cpuid];
 
+	printk(KERN_INFO"Running RTT on CPU %d\n", cpuid);
  	while(R < T->tv_nsec)
 	{
 		sumOfHPTasks = 0;
@@ -164,7 +171,7 @@ int canRunOnCPU(pid_t pid, int cpuid, struct timespec *C, struct timespec *T)
 	if(CPU_Head[cpuid] == NULL)
 	{
 		// First task we can run it by default.
-		
+		printk(KERN_INFO"No Tasks on CPU: %d, can add by default.\n", cpuid);
 		// Need to create the struct and update everything else.
 		tt = (struct task_time*)kmalloc(sizeof(struct task_time), GFP_KERNEL);
 
@@ -191,6 +198,7 @@ int canRunOnCPU(pid_t pid, int cpuid, struct timespec *C, struct timespec *T)
 	else
 	{
 		// We now have to run a RTT test and make sure that it will fit. Only need to run on the new addition since the ones before were schedualible.
+		printk(KERN_INFO"Tasks on CPU: %d, Need to run RTT.\n", cpuid);
 		if(RTT(cpuid, C, T) == 1)
 		{	
 			printk(KERN_INFO"[RSV] PID %u passed the RTT. Adding to reservation.\n", pid);
@@ -217,10 +225,11 @@ int canRunOnCPU(pid_t pid, int cpuid, struct timespec *C, struct timespec *T)
 			// Check the head node, easy single case to swap.
 			if(C_lessthan_T(T, &CPU_Head[cpuid]->T))
 			{
+				printk("[RSV] Adding Task to head node.\n");
 				tt->next = CPU_Head[cpuid];
 				CPU_Head[cpuid]->prev = tt;
 				CPU_Head[cpuid] = tt;
-				return 1;
+				goto totalRTTTest;
 			}
 
 			// Need to search.
@@ -230,10 +239,11 @@ int canRunOnCPU(pid_t pid, int cpuid, struct timespec *C, struct timespec *T)
 			{
 				if(C_lessthan_T(T, &tts->T))
 				{
+					printk("[RSV] Adding Task to middle of list.\n");
 					tt->next = tts;
 					tts->prev = tt;
 					tts = tt;
-					return 1;
+					goto totalRTTTest;
 				}
 				else
 				{
@@ -243,13 +253,13 @@ int canRunOnCPU(pid_t pid, int cpuid, struct timespec *C, struct timespec *T)
 						tts = tts->next;
 				}
 			}
-
+			printk("[RSV] Adding Task to end node.\n");
 			// We got to the end, add it to the end.
 			tts->next = tt;
 			tt->prev = tts;
 
 
-			
+			totalRTTTest:
 			// Make sure everything else is still schedualible.
 			printk(KERN_INFO"[RSV] PID %u and has been added to reservation on CPU: %d. Checking all task.\n", pid, cpuid);
 			tts = CPU_Head[cpuid];
@@ -563,7 +573,7 @@ asmlinkage int sys_set_rsv(pid_t pid, struct timespec *C, struct timespec *T, in
 		return -1;
 	}
 	task->cpuaffinity = targetCPUID;
-	
+	printk(KERN_INFO"[RSV] Reservation Set. CPU affinity Set. \n");
 
 	return 0;
 }
