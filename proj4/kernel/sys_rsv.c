@@ -148,7 +148,7 @@ static int RTT(int cpuid, struct timespec *C, struct timespec *T)
 		// R_(K+1) = C + Sum Of HP Tasks.
 		R_next = C->tv_nsec + sumOfHPTasks;
 
-		printk(KERN_INFO"[RTT] R(k+1)[%d] = C[%d] + sumHP[%d]\n",R_next, C->tv_nsec, sumOfHPTasks);
+		printk(KERN_INFO"[RTT] R(k+1)[%lld] = C[%lld] + sumHP[%lld]\n",R_next, C->tv_nsec, sumOfHPTasks);
 
 		// Break condition.
 		if (R_next == R)
@@ -228,7 +228,7 @@ static int RTT_PID(int cpuid, struct timespec *C, struct timespec *T, pid_t pid)
 		// R_(K+1) = C + Sum Of HP Tasks.
 		R_next = C->tv_nsec + sumOfHPTasks;
 
-		printk(KERN_INFO"[RTT-PID] R(k+1)[%d] = C[%d] + sumHP[%d]\n",R_next, C->tv_nsec, sumOfHPTasks);
+		printk(KERN_INFO"[RTT-PID] R(k+1)[%lld] = C[%lld] + sumHP[%lld]\n",R_next, C->tv_nsec, sumOfHPTasks);
 
 		// Break condition.
 		if (R_next == R)
@@ -431,8 +431,6 @@ int findCPU(pid_t pid, struct timespec *C, struct timespec *T)
 	int totalUtil;
 
 	int cpuid;
-
-	int numPossibleCores = 0;
 	int i;
 	struct task_time *tt;
 	// Array to contain Utils of all CPUs and associated core number. Makes sorting easier.
