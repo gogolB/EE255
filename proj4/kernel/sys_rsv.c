@@ -163,12 +163,86 @@ static int RTT(int cpuid, struct timespec *C, struct timespec *T)
 	return 0;
 }
 
+static int RTT_PID(int cpuid, struct timespec *C, struct timespec *T, pid_t pid)
+{
+	int util; 
+	int totalUtil;
+	int numOfHPTasks;
+	int i;
+	long long int R, R_next, sumOfHPTasks;
+	
+	struct  task_time *tt;
+	
+
+	// Get the util
+	util = getUtil(C,T);
+	printk(KERN_INFO"Running RTT on CPU %d with (%ld, %ld) and util %d\n", cpuid, C->tv_nsec, T->tv_nsec, util);
+
+
+	// First check total util
+	totalUtil = 0;	
+	tt = CPU_Head[cpuid];
+	while(tt != NULL)
+	{
+		if(C_lessthan_T(&tt->T, T))
+			numOfHPTasks++;
+			
+		if(tt->pid != pid)
+			totalUtil += tt->util;
+			
+		tt = tt->next;
+	}
+	
+	// Utilization is above 100% can't schedule.
+	if((totalUtil + util) > 100)
+	{
+		printk(KERN_WARNING"Utilization on this CPU would be over 100, can't schedule\n");
+		return 0;
+	}
+	// Utilization is below 100% which means we need to run the RTT
+	printk(KERN_INFO"Current util on CPU %d is %d", cpuid, totalUtil);
+
+	// R0 = C;
+	R = C->tv_nsec;
+	tt = CPU_Head[cpuid];
+
+	printk(KERN_INFO"Running RTT on CPU %d\n", cpuid);
+ 	while(R < T->tv_nsec)
+	{
+		sumOfHPTasks = 0;
+		for(i = 0; i < numOfHPTasks; i++)
+		{
+			if(tt->pid != pid)
+				sumOfHPTasks += div_with_ceil(R,tt->T.tv_nsec)*tt->C.tv_nsec;
+			
+			tt = tt->next;
+		}
+
+		// R_(K+1) = C + Sum Of HP Tasks.
+		R_next = C->tv_nsec + sumOfHPTasks;
+
+		// Break condition.
+		if (R_next == R)
+			break;
+		else
+			R = R_next;
+	}
+	
+	if(R < T->tv_nsec)
+	{
+		// Test passed.
+		return 1;
+	}
+
+	return 0;
+}
+
 int canRunOnCPU(pid_t pid, int cpuid, struct timespec *C, struct timespec *T)
 {
 
 	struct task_time* tt;
 	struct task_time* tts;
-	int wasHead = 0;
+	
 	if(CPU_Head[cpuid] == NULL)
 	{
 		// First task we can run it by default.
@@ -265,55 +339,12 @@ int canRunOnCPU(pid_t pid, int cpuid, struct timespec *C, struct timespec *T)
 			tts = CPU_Head[cpuid];
 			while(tts != NULL)
 			{
-				// First Temp Remove from list
-				
-				// If it is the head node check, move everything up one.
-				if(tts == CPU_Head[cpuid])
+				if(RTT_PID(cpuid, &tts->C, &tts->T, tt->pid) == 1)
 				{
-					printk(KERN_INFO"[RSV] Removing Head Node\n");
-					wasHead = 1;
-					CPU_Head[cpuid] = tts->next;
-				}
-				else
-				{
-					printk(KERN_INFO"[RSV] Removing Body Node\n");
-					tts->prev->next = tts->next;
-					tts->next->prev = tts->prev;
-				}
-				
-			
-				if(RTT(cpuid, &tts->C, &tts->T) == 1)
-				{
-					// Restore the array
-					if(wasHead)
-					{
-						printk(KERN_INFO"[RSV] Restoring Head Node\n");
-						CPU_Head[cpuid] = tts;
-						wasHead = 0;
-					}
-					else
-					{
-						printk(KERN_INFO"[RSV] Restoring Body Node\n");
-						tts->prev->next = tts;
-						tts->next->prev = tts;
-					}
 					tts = tts->next;
 				}
 				else
 				{
-					// Restore the array
-					if(wasHead)
-					{
-						printk(KERN_INFO"[RSV] Restoring Head Node\n");
-						CPU_Head[cpuid] = tts;
-						wasHead = 0;
-					}
-					else
-					{
-						printk(KERN_INFO"[RSV] Restoring Body Node\n");
-						tts->prev->next = tts;
-						tts->next->prev = tts;
-					}
 					printk(KERN_INFO"[RSV] PID %u failed checking RTT of all other tasks on CPU: %d.\n", pid, cpuid);
 					// One of the earlier tasks failed the RTT.
 					sys_cancel_rsv(pid);
