@@ -97,7 +97,7 @@ static inline int RTT(int cpuid, struct timespec *C, struct timespec *T)
 	int i;
 	long long int R, R_next, sumOfHPTasks;
 	
-	struct task_time *tt;
+	struct  task_time *tt;
 	
 
 	// Get the util
