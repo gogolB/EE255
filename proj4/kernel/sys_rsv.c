@@ -333,7 +333,6 @@ int findCPU(pid_t pid, struct timespec *C, struct timespec *T)
 	int cpuid;
 
 	int numPossibleCores = 0;
-	int high = 0;
 	int i;
 	struct task_time *tt;
 	// Array to contain Utils of all CPUs and associated core number. Makes sorting easier.
@@ -403,13 +402,17 @@ int findCPU(pid_t pid, struct timespec *C, struct timespec *T)
 		// Go through all the CPU's and pick the first one that the task will fit on.
 		for(i = 0; i < 4; i++)
 		{
-			if(CPUutils[cpuid][0] + util < 100
+			if(CPUutils[cpuid][0] + util < 100)
 			{
 				cpuid = CPUutils[i][1];
 				if(canRunOnCPU(pid,cpuid,C,T))
 					return cpuid;
 			}
 		}
+	}
+	else
+	{
+		printk(KERN_ALERT"[RSV] UNKNOWN BINNING POLICY %d\n",task_partitioning_heuristic);
 	}
 	// We didn't find an available CPU
 	printk(KERN_INFO"[RSV] Failed to find CPU for pid %u\n",pid);

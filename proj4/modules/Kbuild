@@ -1,2 +1,2 @@
-obj-m += part_dev.o
+obj-y += part_dev.o
 
