@@ -779,8 +779,7 @@ void __noreturn do_exit(long code)
 	
 	if(tsk->rsv_task == 1)
 	{
-
-		tsk->rsv_task = 0;
+		// Task was reserved and needs to be canceled properly.
 		sys_cancel_rsv(tsk->pid);
 		printk(KERN_INFO"PID: %d was rsv'd and now is canceled.\n", tsk->pid);	
 	}
