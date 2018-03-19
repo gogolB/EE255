@@ -135,7 +135,7 @@ static int RTT(int cpuid, struct timespec *C, struct timespec *T)
 	tt = CPU_Head[cpuid];
 
 	printk(KERN_INFO"[RTT] Running RTT on CPU %d with numHPTasks %d\n", cpuid, numOfHPTasks);
- 	while(R < T->tv_nsec)
+ 	while(R <= T->tv_nsec)
 	{
 		tt = CPU_Head[cpuid];
 		sumOfHPTasks = 0;
@@ -157,7 +157,7 @@ static int RTT(int cpuid, struct timespec *C, struct timespec *T)
 			R = R_next;
 	}
 	
-	if(R < T->tv_nsec)
+	if(R <= T->tv_nsec)
 	{
 		// Test passed.
 		return 1;
@@ -211,7 +211,7 @@ static int RTT_PID(int cpuid, struct timespec *C, struct timespec *T, pid_t pid)
 	tt = CPU_Head[cpuid];
 
 	printk(KERN_INFO"[RTT-PID]Running RTT on CPU %d\n", cpuid);
- 	while(R < T->tv_nsec)
+ 	while(R <= T->tv_nsec)
 	{
 		tt = CPU_Head[cpuid];
 		
@@ -237,7 +237,7 @@ static int RTT_PID(int cpuid, struct timespec *C, struct timespec *T, pid_t pid)
 			R = R_next;
 	}
 	
-	if(R < T->tv_nsec)
+	if(R <= T->tv_nsec)
 	{
 		// Test passed.
 		return 1;
@@ -471,7 +471,7 @@ int findCPU(pid_t pid, struct timespec *C, struct timespec *T)
 		for(i = 3; i >= 0; i--)
 		{
 			printk(KERN_INFO"[RSV] Checking CPU %d with util %d\n", CPUutils[i][1], CPUutils[i][0]);
-			if(CPUutils[i][0] + util < 100)
+			if(CPUutils[i][0] + util <= 100)
 			{
 				cpuid = CPUutils[i][1];
 				if(canRunOnCPU(pid,cpuid,C,T))
@@ -492,7 +492,7 @@ int findCPU(pid_t pid, struct timespec *C, struct timespec *T)
 		for(i = 0; i < 4; i++)
 		{
 			printk(KERN_INFO"[RSV] Checking CPU %d with util %d\n", CPUutils[i][1], CPUutils[i][0]);
-			if(CPUutils[i][0] + util < 100)
+			if(CPUutils[i][0] + util <= 100)
 			{
 				cpuid = CPUutils[i][1];
 				if(canRunOnCPU(pid,cpuid,C,T))
@@ -512,7 +512,7 @@ int findCPU(pid_t pid, struct timespec *C, struct timespec *T)
 		for(i = 0; i < 4; i++)
 		{
 			printk(KERN_INFO"[RSV] Checking CPU %d with util %d\n", CPUutils[i][1], CPUutils[i][0]);
-			if(CPUutils[i][0] + util < 100)
+			if(CPUutils[i][0] + util <= 100)
 			{
 				cpuid = CPUutils[i][1];
 				if(canRunOnCPU(pid,cpuid,C,T))
@@ -626,7 +626,7 @@ asmlinkage int sys_set_rsv(pid_t pid, struct timespec *C, struct timespec *T, in
 
 	if(cpuid == -1)
 	{
-                // Accept a new task iff partitioning heuristic is able to successfully allocate the 
+		// Accept a new task iff partitioning heuristic is able to successfully allocate the 
 		// new task to a CPU core. Allocation successful iff all tasks of target CPU core are 
 		// guaranteed to be schedulable by rtt.
 		// Use "Best-Fit" as partition heuristic. Find core with min remaining space among 
@@ -640,6 +640,8 @@ asmlinkage int sys_set_rsv(pid_t pid, struct timespec *C, struct timespec *T, in
 	}
 	else
 	{
+		// Allows for removal later.
+		task->rsv_task = 1;
 		if(canRunOnCPU(target_pid, cpuid, C, T) != 0)
 		{
 			targetCPUID = cpuid;
