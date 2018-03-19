@@ -1,2 +1,2 @@
-obj-m += sys_fs.o
+obj-y += sys_fs.o
 

@@ -7,7 +7,7 @@
 #include <linux/err.h>
 #include <linux/sched.h>
 
-#include "sys_rsv.h"
+#include "../proj4/kernel/sys_rsv.h"
 // Help
 // pradheepshrinivasan.github.io
 // cs.swarthmore.edu
@@ -18,29 +18,30 @@
 
 MODULE_LICENSE("GPL");
 MODULE_AUTHOR("Jesse Garcia and Souradeep Bhattacharya");
-MODULE_DESCRIPTION("This module, when read will allow partitioning", 
-"heuristics to be read and applied to the current CPU");
+MODULE_DESCRIPTION("This module, when read will allow partitioning heuristics to be read and applied to the current CPU");
 MODULE_VERSION("0.1");
 
 
-static struct class* partdevClass = NULL;
-static struct device* partdevDevice = NULL;
+//static struct class* partdevClass = NULL;
+//static struct device* partdevDevice = NULL;
 
 // prototypes for functions that we'll use today
-static int 	partdev_query(void);
-static void 	partdev_specify(int newPolicy );
+//static int 	partdev_query(void);
+//static void 	partdev_specify(int newPolicy );
 
-static struct file_operations fops = 
-{
-	.get = partdev_query,
-	.set = partdev_specify
-};
+//static struct file_operations fops = 
+//{
+
+//};
+struct kobject *my_kobj, *partpol;
 
 static int __init partdev_init(void) 
 { 
-	pr_debug("Module initialized successfully \n");
+	struct kobject *my_kobj, *partpol;
+
+
+	printk(KERN_INFO"[PART]Module initializing\n");
 	
-	static struct kobject *my_kobj, *partpol;
 	my_kobj = kobject_create_and_add("ee255",NULL);
 	if(!my_kobj)
 	{
@@ -52,25 +53,27 @@ static int __init partdev_init(void)
 		return -ENOMEM;
 	}
 	kobject_put(my_kobj);
+	printk(KERN_INFO"[PART]Module initializing\n");
 	return 0;
 }
 
 static void __exit partdev_exit(void)
 {
 	printk(KERN_INFO"[PARTDEV] LKM Removed\n");
-	pr_debug("Module exited successfully \n");
+
 }
 
-static int partdev_query(void)
-{
-	return rsv_getPolicy;
-}
+//static int partdev_query(void)
+//{
+//	int policy = rsv_getPolicy();
+//	return rsv_getPolicy();
+//}
 
-static void partdev_set(int newPolicy)
-{
-	rsv_setPolicy(newPolicy);
-}
-module_init(mymodule_init);
-module_exit(mymodule_exit);
+//static void partdev_set(int newPolicy)
+//{
+//	rsv_setPolicy(newPolicy);
+//}
+module_init(partdev_init);
+module_exit(partdev_exit);
 
 
