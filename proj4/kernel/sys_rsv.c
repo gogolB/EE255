@@ -31,7 +31,7 @@ int rsv_getPolicy(void)
 
 int rsv_setPolicy(int newPolicy)
 {
-	if(newPolicy != BEST_FIT || newPolicy != WORST_FIT || newPolicy != FIRST_FIT)
+	if(newPolicy != BEST_FIT && newPolicy != WORST_FIT && newPolicy != FIRST_FIT)
 	{
 		printk(KERN_WARNING"[RSV] Tried to set invalid policy. (%d)\n", newPolicy);
 		return -1;
@@ -307,14 +307,14 @@ void sortUtils(int unsorted[][2], int length)
 	{
 		j = i;
 		
-		while (j > 0 && unsorted[j][1] < unsorted[j-1][1])
+		while (j > 0 && unsorted[j][0] < unsorted[j-1][0])
 		{
-			temp1 = unsorted[j][1];
-			temp2 = unsorted[j][2];
+			temp1 = unsorted[j][0];
+			temp2 = unsorted[j][1];
+			unsorted[j][0] = unsorted[j-1][0];
 			unsorted[j][1] = unsorted[j-1][1];
-			unsorted[j][2] = unsorted[j-1][2];
-			unsorted[j-1][1] = temp1;
-			unsorted[j-1][2] = temp2;
+			unsorted[j-1][0] = temp1;
+			unsorted[j-1][1] = temp2;
 			j--;
 		}
 	}
@@ -346,9 +346,10 @@ int findCPU(pid_t pid, struct timespec *C, struct timespec *T)
 		while(tt != NULL)
 		{
 			totalUtil += tt->util;
+			tt = tt->next;
 		}
-		CPUutils[cpuid][1] = totalUtil;
-		CPUutils[cpuid][2] = cpuid;
+		CPUutils[cpuid][0] = totalUtil;
+		CPUutils[cpuid][1] = cpuid;
 		// Check if CPU(cpuid) can handle new task
 		if(totalUtil+util <= 100)
 		{
@@ -368,7 +369,7 @@ int findCPU(pid_t pid, struct timespec *C, struct timespec *T)
 	high = 0 + numPossibleCores - 1;
 	for(i = 0; i <= high; i++)
 	{
-		cpuid = CPUutils[i][2];
+		cpuid = CPUutils[i][1];
 		if(canRunOnCPU(pid,cpuid,C,T))
 			return cpuid;
 	}
