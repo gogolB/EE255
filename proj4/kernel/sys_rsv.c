@@ -106,7 +106,7 @@ static int RTT(int cpuid, struct timespec *C, struct timespec *T)
 
 	// Get the util
 	util = getUtil(C,T);
-	printk(KERN_INFO"Running RTT on CPU %d with (%ld, %ld) and util %d\n", cpuid, C->tv_nsec, T->tv_nsec, util);
+	printk(KERN_INFO"[RTT] Running RTT on CPU %d with (%ld, %ld) and util %d\n", cpuid, C->tv_nsec, T->tv_nsec, util);
 
 
 	// First check total util
@@ -124,19 +124,20 @@ static int RTT(int cpuid, struct timespec *C, struct timespec *T)
 	// Utilization is above 100% can't schedule.
 	if((totalUtil + util) > 100)
 	{
-		printk(KERN_WARNING"Utilization on this CPU would be over 100, can't schedule\n");
+		printk(KERN_WARNING"[RTT] Utilization on this CPU would be over 100, can't schedule\n");
 		return 0;
 	}
 	// Utilization is below 100% which means we need to run the RTT
-	printk(KERN_INFO"Current util on CPU %d is %d", cpuid, totalUtil);
+	printk(KERN_INFO"[RTT] Current util on CPU %d is %d", cpuid, totalUtil);
 
 	// R0 = C;
 	R = C->tv_nsec;
 	tt = CPU_Head[cpuid];
 
-	printk(KERN_INFO"Running RTT on CPU %d\n", cpuid);
+	printk(KERN_INFO"[RTT] Running RTT on CPU %d with numHPTasks %d\n", cpuid, numOfHPTasks);
  	while(R < T->tv_nsec)
 	{
+		tt = CPU_Head[cpuid];
 		sumOfHPTasks = 0;
 		for(i = 0; i < numOfHPTasks; i++)
 		{
@@ -146,6 +147,8 @@ static int RTT(int cpuid, struct timespec *C, struct timespec *T)
 
 		// R_(K+1) = C + Sum Of HP Tasks.
 		R_next = C->tv_nsec + sumOfHPTasks;
+
+		printk(KERN_INFO"[RTT] R(k+1)[%d] = C[%d] + sumHP[%d]\n",R_next, C->tv_nsec, sumOfHPTasks);
 
 		// Break condition.
 		if (R_next == R)
@@ -176,7 +179,7 @@ static int RTT_PID(int cpuid, struct timespec *C, struct timespec *T, pid_t pid)
 
 	// Get the util
 	util = getUtil(C,T);
-	printk(KERN_INFO"Running RTT on CPU %d with (%ld, %ld) and util %d\n", cpuid, C->tv_nsec, T->tv_nsec, util);
+	printk(KERN_INFO"[RTT-PID]Running RTT_PID on CPU %d with (%ld, %ld) and util %d\n", cpuid, C->tv_nsec, T->tv_nsec, util);
 
 
 	// First check total util
@@ -186,7 +189,8 @@ static int RTT_PID(int cpuid, struct timespec *C, struct timespec *T, pid_t pid)
 	{
 		if(C_lessthan_T(&tt->T, T))
 			numOfHPTasks++;
-			
+		
+		// If it us us, ignore it.
 		if(tt->pid != pid)
 			totalUtil += tt->util;
 			
@@ -196,22 +200,25 @@ static int RTT_PID(int cpuid, struct timespec *C, struct timespec *T, pid_t pid)
 	// Utilization is above 100% can't schedule.
 	if((totalUtil + util) > 100)
 	{
-		printk(KERN_WARNING"Utilization on this CPU would be over 100, can't schedule\n");
+		printk(KERN_WARNING"[RTT-PID]Utilization on this CPU would be over 100, can't schedule\n");
 		return 0;
 	}
 	// Utilization is below 100% which means we need to run the RTT
-	printk(KERN_INFO"Current util on CPU %d is %d", cpuid, totalUtil);
+	printk(KERN_INFO"[RTT-PID]Current util on CPU %d is %d", cpuid, totalUtil);
 
 	// R0 = C;
 	R = C->tv_nsec;
 	tt = CPU_Head[cpuid];
 
-	printk(KERN_INFO"Running RTT on CPU %d\n", cpuid);
+	printk(KERN_INFO"[RTT-PID]Running RTT on CPU %d\n", cpuid);
  	while(R < T->tv_nsec)
 	{
+		tt = CPU_Head[cpuid];
+		
 		sumOfHPTasks = 0;
 		for(i = 0; i < numOfHPTasks; i++)
 		{
+			// Should never happen, but if it is us, ignore it.
 			if(tt->pid != pid)
 				sumOfHPTasks += div_with_ceil(R,tt->T.tv_nsec)*tt->C.tv_nsec;
 			
@@ -220,6 +227,8 @@ static int RTT_PID(int cpuid, struct timespec *C, struct timespec *T, pid_t pid)
 
 		// R_(K+1) = C + Sum Of HP Tasks.
 		R_next = C->tv_nsec + sumOfHPTasks;
+
+		printk(KERN_INFO"[RTT-PID] R(k+1)[%d] = C[%d] + sumHP[%d]\n",R_next, C->tv_nsec, sumOfHPTasks);
 
 		// Break condition.
 		if (R_next == R)
@@ -331,7 +340,8 @@ int canRunOnCPU(pid_t pid, int cpuid, struct timespec *C, struct timespec *T)
 			// We got to the end, add it to the end.
 			tts->next = tt;
 			tt->prev = tts;
-
+			// We can skip the total test because it was added to the end so implicitly all the other ones must be okay.
+			goto validResult;
 
 			totalRTTTest:
 			// Make sure everything else is still schedualible.
@@ -354,6 +364,7 @@ int canRunOnCPU(pid_t pid, int cpuid, struct timespec *C, struct timespec *T)
 			
 			}
 			
+			validResult:
 			return 1;
 		}
 
