@@ -106,7 +106,7 @@ static int RTT(int cpuid, struct timespec *C, struct timespec *T)
 
 	// Get the util
 	util = getUtil(C,T);
-	printk(KERN_INFO"Running RTT on CPU %d with (%lld, %lld) and util %d\n", cpuid, C->tv_nsec, T->tv_nsec, util);
+	printk(KERN_INFO"Running RTT on CPU %d with (%ld, %ld) and util %d\n", cpuid, C->tv_nsec, T->tv_nsec, util);
 
 
 	// First check total util
@@ -124,7 +124,7 @@ static int RTT(int cpuid, struct timespec *C, struct timespec *T)
 	// Utilization is above 100% can't schedule.
 	if((totalUtil + util) > 100)
 	{
-		printk(KERN_WARN"Utilization on this CPU would be over 100%, can't schedule\n");
+		printk(KERN_WARNING"Utilization on this CPU would be over 100%, can't schedule\n");
 		return 0;
 	}
 	// Utilization is below 100% which means we need to run the RTT
