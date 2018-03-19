@@ -148,7 +148,7 @@ static int RTT(int cpuid, struct timespec *C, struct timespec *T)
 		// R_(K+1) = C + Sum Of HP Tasks.
 		R_next = C->tv_nsec + sumOfHPTasks;
 
-		printk(KERN_INFO"[RTT] R(k+1)[%lld] = C[%lld] + sumHP[%lld]\n",R_next, C->tv_nsec, sumOfHPTasks);
+		printk(KERN_INFO"[RTT] R(k+1)[%lld] = C[%ld] + sumHP[%lld]\n",R_next, C->tv_nsec, sumOfHPTasks);
 
 		// Break condition.
 		if (R_next == R)
@@ -228,7 +228,7 @@ static int RTT_PID(int cpuid, struct timespec *C, struct timespec *T, pid_t pid)
 		// R_(K+1) = C + Sum Of HP Tasks.
 		R_next = C->tv_nsec + sumOfHPTasks;
 
-		printk(KERN_INFO"[RTT-PID] R(k+1)[%lld] = C[%lld] + sumHP[%lld]\n",R_next, C->tv_nsec, sumOfHPTasks);
+		printk(KERN_INFO"[RTT-PID] R(k+1)[%lld] = C[%ld] + sumHP[%lld]\n",R_next, C->tv_nsec, sumOfHPTasks);
 
 		// Break condition.
 		if (R_next == R)
