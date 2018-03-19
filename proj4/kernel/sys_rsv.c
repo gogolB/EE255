@@ -128,7 +128,7 @@ static int RTT(int cpuid, struct timespec *C, struct timespec *T)
 		return 0;
 	}
 	// Utilization is below 100% which means we need to run the RTT
-	printk(KERN_INFO"Util on CPU %d is %d", cpuid, totalUtil);
+	printk(KERN_INFO"Current util on CPU %d is %d", cpuid, totalUtil);
 
 	// R0 = C;
 	R = C->tv_nsec;
@@ -270,11 +270,13 @@ int canRunOnCPU(pid_t pid, int cpuid, struct timespec *C, struct timespec *T)
 				// If it is the head node check, move everything up one.
 				if(tts == CPU_Head[cpuid])
 				{
+					printk(KERN_INFO"[RSV] Removing Head Node\n");
 					wasHead = 1;
 					CPU_Head[cpuid] = tts->next;
 				}
 				else
 				{
+					printk(KERN_INFO"[RSV] Removing Body Node\n");
 					tts->prev->next = tts->next;
 					tts->next->prev = tts->prev;
 				}
@@ -285,11 +287,13 @@ int canRunOnCPU(pid_t pid, int cpuid, struct timespec *C, struct timespec *T)
 					// Restore the array
 					if(wasHead)
 					{
+						printk(KERN_INFO"[RSV] Restoring Head Node\n");
 						CPU_Head[cpuid] = tts;
 						wasHead = 0;
 					}
 					else
 					{
+						printk(KERN_INFO"[RSV] Restoring Body Node\n");
 						tts->prev->next = tts;
 						tts->next->prev = tts;
 					}
@@ -300,11 +304,13 @@ int canRunOnCPU(pid_t pid, int cpuid, struct timespec *C, struct timespec *T)
 					// Restore the array
 					if(wasHead)
 					{
+						printk(KERN_INFO"[RSV] Restoring Head Node\n");
 						CPU_Head[cpuid] = tts;
 						wasHead = 0;
 					}
 					else
 					{
+						printk(KERN_INFO"[RSV] Restoring Body Node\n");
 						tts->prev->next = tts;
 						tts->next->prev = tts;
 					}
@@ -410,55 +416,71 @@ int findCPU(pid_t pid, struct timespec *C, struct timespec *T)
 		CPUutils[cpuid][0] = totalUtil;
 		CPUutils[cpuid][1] = cpuid;
 		
+		printk(KERN_INFO"[RSV] Util of CPU %d is %d\n", cpuid, totalUtil);
+		
 	}
-	// We now have an array of bools that show which cores (if any) can handle the new task
-	// First, we shoud determine if any cores could schedule the task
-	if(numPossibleCores <= 0)
-		return -1;
 	// This means we have at least one core
 	// Sort utils in ascending order(stack exchange solution) := CPUutils
 	// Now, start from the end of this array (position 3) and decrement until (3 - numPossibleCores)
 	if(task_partitioning_heuristic == BEST_FIT)
 	{ 
+		printk(KERN_INFO"[RSV] Using BEST FIT\n");
 		// Sort The CPU's in accending order of utilization
 		sortUtils(CPUutils,4);
 		// Go through and pick the CPU with the least free space.
 		for(i = 3; i >= 0; i--)
 		{
-			if(CPUutils[cpuid][0] + util < 100)
+			printk(KERN_INFO"[RSV] Checking CPU %d with util %d\n", CPUutils[i][1], CPUutils[i][0]);
+			if(CPUutils[i][0] + util < 100)
 			{
 				cpuid = CPUutils[i][1];
 				if(canRunOnCPU(pid,cpuid,C,T))
 					return cpuid;
 			}
+			else
+			{
+				printk(KERN_INFO"[RSV] Task didn't fit.\n");
+			}
 		}
 	}
 	else if(task_partitioning_heuristic == WORST_FIT)
 	{
+		printk(KERN_INFO"[RSV] Using WORST FIT\n");
 		// Sort the CPU's in accending order of utilization.
 		sortUtils(CPUutils,4);
 		// Go through and pick the CPU with the most free space.
 		for(i = 0; i < 4; i++)
 		{
-			if(CPUutils[cpuid][0] + util < 100)
+			printk(KERN_INFO"[RSV] Checking CPU %d with util %d\n", CPUutils[i][1], CPUutils[i][0]);
+			if(CPUutils[i][0] + util < 100)
 			{
 				cpuid = CPUutils[i][1];
 				if(canRunOnCPU(pid,cpuid,C,T))
 					return cpuid;
+			}
+			else
+			{
+				printk(KERN_INFO"[RSV] Task didn't fit.\n");
 			}
 		}
 		
 	}
 	else if(task_partitioning_heuristic == FIRST_FIT)
 	{
+		printk(KERN_INFO"[RSV] Using FIRST FIT\n");
 		// Go through all the CPU's and pick the first one that the task will fit on.
 		for(i = 0; i < 4; i++)
 		{
-			if(CPUutils[cpuid][0] + util < 100)
+			printk(KERN_INFO"[RSV] Checking CPU %d with util %d\n", CPUutils[i][1], CPUutils[i][0]);
+			if(CPUutils[i][0] + util < 100)
 			{
 				cpuid = CPUutils[i][1];
 				if(canRunOnCPU(pid,cpuid,C,T))
 					return cpuid;
+			}
+			else
+			{
+				printk(KERN_INFO"[RSV] Task didn't fit.\n");
 			}
 		}
 	}
