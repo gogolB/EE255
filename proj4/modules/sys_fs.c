@@ -59,7 +59,7 @@ static int __init partdev_init(void)
 
 static void __exit partdev_exit(void)
 {
-	printk(KERN_INFO"[PARTDEV] LKM Removed\n");
+	printk(KERN_INFO"[PART] LKM Removed\n");
 
 }
 
