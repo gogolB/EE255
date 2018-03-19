@@ -58,6 +58,10 @@ int rsv_setPolicy(int newPolicy)
 		return 0;
 	}
 }
+
+EXPORT_SYMBOL(rsv_getPolicy);
+EXPORT_SYMBOL(rsv_setPolicy);
+
 // ******************************************************************************************************************************************************************
 static inline uint64_t lldiv(uint64_t dividend, uint32_t divisor)
 {
@@ -334,6 +338,10 @@ int findCPU(pid_t pid, struct timespec *C, struct timespec *T)
 	struct task_time *tt;
 	// Array to contain Utils of all CPUs and associated core number. Makes sorting easier.
 	int CPUutils[4][2];
+
+
+	printk(KERN_INFO"[RSV] Attempting to find CPU for pid %u\n",pid);
+
 	// Array containing sorted <util,cpu> pairs
 	//int CPUsorted[4][2];
 	// Calculate util needed for new task
@@ -350,11 +358,6 @@ int findCPU(pid_t pid, struct timespec *C, struct timespec *T)
 		}
 		CPUutils[cpuid][0] = totalUtil;
 		CPUutils[cpuid][1] = cpuid;
-		// Check if CPU(cpuid) can handle new task
-		if(totalUtil+util <= 100)
-		{
-			numPossibleCores++;
-		}
 		
 	}
 	// We now have an array of bools that show which cores (if any) can handle the new task
@@ -363,17 +366,53 @@ int findCPU(pid_t pid, struct timespec *C, struct timespec *T)
 		return -1;
 	// This means we have at least one core
 	// Sort utils in ascending order(stack exchange solution) := CPUutils
-	//std::sortUtils(CPUutils,CPUutils + 4,comparator)
-	sortUtils(CPUutils,4);   //******************************UNCOMMENT THSI LINE
 	// Now, start from the end of this array (position 3) and decrement until (3 - numPossibleCores)
-	high = 0 + numPossibleCores - 1;
-	for(i = 0; i <= high; i++)
+	if(task_partitioning_heuristic == BEST_FIT)
+	{ 
+		// Sort The CPU's in accending order of utilization
+		sortUtils(CPUutils,4);
+		// Go through and pick the CPU with the least free space.
+		for(i = 3; i >= 0; i--)
+		{
+			if(CPUutils[cpuid][0] + util < 100)
+			{
+				cpuid = CPUutils[i][1];
+				if(canRunOnCPU(pid,cpuid,C,T))
+					return cpuid;
+			}
+		}
+	}
+	else if(task_partitioning_heuristic == WORST_FIT)
 	{
-		cpuid = CPUutils[i][1];
-		if(canRunOnCPU(pid,cpuid,C,T))
-			return cpuid;
+		// Sort the CPU's in accending order of utilization.
+		sortUtils(CPUutils,4);
+		// Go through and pick the CPU with the most free space.
+		for(i = 0; i < 4; i++)
+		{
+			if(CPUutils[cpuid][0] + util < 100)
+			{
+				cpuid = CPUutils[i][1];
+				if(canRunOnCPU(pid,cpuid,C,T))
+					return cpuid;
+			}
+		}
+		
+	}
+	else if(task_partitioning_heuristic == FIRST_FIT)
+	{
+		// Go through all the CPU's and pick the first one that the task will fit on.
+		for(i = 0; i < 4; i++)
+		{
+			if(CPUutils[cpuid][0] + util < 100
+			{
+				cpuid = CPUutils[i][1];
+				if(canRunOnCPU(pid,cpuid,C,T))
+					return cpuid;
+			}
+		}
 	}
 	// We didn't find an available CPU
+	printk(KERN_INFO"[RSV] Failed to find CPU for pid %u\n",pid);
 	return -1;
 }
 
@@ -478,7 +517,7 @@ asmlinkage int sys_set_rsv(pid_t pid, struct timespec *C, struct timespec *T, in
 		targetCPUID = findCPU(pid,C,T);
 		if(targetCPUID == -1)
 		{
-			printk(KERN_ALERT"[RSV] Feature unsupported, please pick a valid CPUID [0, 3]\n");
+			printk(KERN_ALERT"[RSV] Failed to schedule task.\n");
 			return -1;
 		}
 	}

@@ -1,2 +1,2 @@
-obj-m += sys_fs.o
+obj-m += part_dev.o
 
