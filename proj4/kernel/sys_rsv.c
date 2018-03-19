@@ -233,8 +233,7 @@ int canRunOnCPU(pid_t pid, int cpuid, struct timespec *C, struct timespec *T)
 			}
 
 			// Need to search.
-			// Skip CPU_Head because we did that above.
-			tts = CPU_Head[cpuid]->next;
+			tts = CPU_Head[cpuid];
 			while(tts != NULL)
 			{
 				if(C_lessthan_T(T, &tts->T))
