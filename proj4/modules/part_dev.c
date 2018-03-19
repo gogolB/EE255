@@ -106,7 +106,7 @@ static int __init partdev_init(void)
 		return -ENOMEM;
 	}
 	
-	if(PTR_ERR(sysfs_create_file(my_kobj, &mydev.attr)))
+	if(sysfs_create_file(my_kobj, &mydev.attr) != 0)
 	{
 		return -ENOMEM;
 	}

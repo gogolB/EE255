@@ -248,6 +248,9 @@ int canRunOnCPU(pid_t pid, int cpuid, struct timespec *C, struct timespec *T)
 			tts->next = tt;
 			tt->prev = tts;
 
+
+			
+			// Make sure everything else is still schedualible.
 			printk(KERN_INFO"[RSV] PID %u and has been added to reservation on CPU: %d. Checking all task.\n", pid, cpuid);
 			tts = CPU_Head[cpuid];
 			while(tts != NULL)
