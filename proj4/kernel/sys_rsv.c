@@ -168,6 +168,7 @@ int canRunOnCPU(pid_t pid, int cpuid, struct timespec *C, struct timespec *T)
 
 	struct task_time* tt;
 	struct task_time* tts;
+	int wasHead = 0;
 	if(CPU_Head[cpuid] == NULL)
 	{
 		// First task we can run it by default.
@@ -264,10 +265,49 @@ int canRunOnCPU(pid_t pid, int cpuid, struct timespec *C, struct timespec *T)
 			tts = CPU_Head[cpuid];
 			while(tts != NULL)
 			{
-				if(RTT(cpuid, &tts->C, &tts->T) == 1)
-					tts = tts->next;
+				// First Temp Remove from list
+				
+				// If it is the head node check, move everything up one.
+				if(tts == CPU_Head[cpuid])
+				{
+					wasHead = 1;
+					CPU_Head[cpuid] = tts->next;
+				}
 				else
 				{
+					tts->prev->next = tts->next;
+					tts->next->prev = tts->prev;
+				}
+				
+			
+				if(RTT(cpuid, &tts->C, &tts->T) == 1)
+				{
+					// Restore the array
+					if(wasHead)
+					{
+						CPU_Head[cpuid] = tts;
+						wasHead = 0;
+					}
+					else
+					{
+						tts->prev->next = tts;
+						tts->next->prev = tts;
+					}
+					tts = tts->next;
+				}
+				else
+				{
+					// Restore the array
+					if(wasHead)
+					{
+						CPU_Head[cpuid] = tts;
+						wasHead = 0;
+					}
+					else
+					{
+						tts->prev->next = tts;
+						tts->next->prev = tts;
+					}
 					printk(KERN_INFO"[RSV] PID %u failed checking RTT of all other tasks on CPU: %d.\n", pid, cpuid);
 					// One of the earlier tasks failed the RTT.
 					sys_cancel_rsv(pid);
