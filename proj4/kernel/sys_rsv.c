@@ -278,6 +278,9 @@ int canRunOnCPU(pid_t pid, int cpuid, struct timespec *C, struct timespec *T)
 	struct task_time* tt;
 	struct task_time* tts;
 	
+	// Added for debugging purposes
+	printCPUTaskList(cpuid);
+	
 	if(CPU_Head[cpuid] == NULL)
 	{
 		// First task we can run it by default.
@@ -405,16 +408,19 @@ static inline void removeFromLinkList(int cpuid, pid_t pid)
 {
 	struct task_time* tt;
 	// Get the head of the link list.
+	printk(KERN_INFO"[RFLL] Removing from linked list\n");
 	tt = CPU_Head[cpuid];
 	while(tt != NULL)
 	{
 		if(tt->pid == pid)
 		{
+			printk(KERN_INFO"[RFLL] Found the PID\n");
 			// We found what we were looking for.
 			// Set the previous one's next to this one.
 			if(tt->prev != NULL) // Deals with head node issue.
 				tt->prev->next = tt->next;
-			
+			else 
+				CPU_Head[cpuid] = CPU_Head[cpuid]->next;
 			// Remove this one
 			kfree(tt);
 			break;
