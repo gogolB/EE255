@@ -315,7 +315,7 @@ int canRunOnCPU(pid_t pid, int cpuid, struct timespec *C, struct timespec *T)
 		printk(KERN_INFO"Tasks on CPU: %d, Need to run RTT.\n", cpuid);
 		if(1)
 		{	
-			printk(KERN_INFO"[RSV] PID %u passed the RTT. Adding to reservation.\n", pid);
+			printk(KERN_INFO"[RSV] PID %u adding to reservation for testing.\n", pid);
 			// We passed the run time test.
 			// Need to add to the Linklist in the right location. First create the object to add.
 			tt = (struct task_time*)kmalloc(sizeof(struct task_time), GFP_KERNEL);
