@@ -95,7 +95,7 @@ void printCPUTaskList(int cpuid)
 {
 	struct task_time *tt;
 	long long int util, totalUtil;
-	printk(KERN_INFO"[RSV-DEBUG] Printing All Tasks on CPU %d PID\t(C,T)\tUtil\n", cpuid);
+	printk(KERN_INFO"[RSV-DEBUG] Printing All Tasks on CPU %d\n[RSV-DEBUG] PID\t(C,T)\tUtil\n", cpuid);
 	if(CPU_Head[cpuid] == NULL)
 	{
 		printk(KERN_INFO"[RSV-DEBUG] No Tasks On this CPU\n");
@@ -118,13 +118,13 @@ void printCPUTaskList(int cpuid)
 }
 
 // ******************************************************************************************************************************************************************
-
+/*
 static int RTT(int cpuid, struct timespec *C, struct timespec *T)
 {
-	int util; 
-	int totalUtil;
-	int numOfHPTasks;
-	int i;
+	int util = 0; 
+	int totalUtil = 0;
+	int numOfHPTasks = 0;
+	int i = 0;
 	long long int R, R_next, sumOfHPTasks;
 	
 	struct  task_time *tt;
@@ -190,14 +190,14 @@ static int RTT(int cpuid, struct timespec *C, struct timespec *T)
 	}
 
 	return 0;
-}
+}*/
 
 static int RTT_PID(int cpuid, struct timespec *C, struct timespec *T, pid_t pid)
 {
-	int util; 
-	int totalUtil;
-	int numOfHPTasks;
-	int i;
+	int util = 0; 
+	int totalUtil = 0;
+	int numOfHPTasks = 0;
+	int i = 0;
 	long long int R, R_next, sumOfHPTasks;
 	
 	struct  task_time *tt;
@@ -236,7 +236,7 @@ static int RTT_PID(int cpuid, struct timespec *C, struct timespec *T, pid_t pid)
 	R = C->tv_nsec;
 	tt = CPU_Head[cpuid];
 
-	printk(KERN_INFO"[RTT-PID]Running RTT on CPU %d\n", cpuid);
+	printk(KERN_INFO"[RTT-PID]Running RTT on CPU %d with %d Higher Priority Tasks\n", cpuid, numOfHPTasks);
  	while(R <= T->tv_nsec)
 	{
 		tt = CPU_Head[cpuid];
@@ -277,9 +277,10 @@ int canRunOnCPU(pid_t pid, int cpuid, struct timespec *C, struct timespec *T)
 
 	struct task_time* tt;
 	struct task_time* tts;
-	
+	int i = 0;
 	// Added for debugging purposes
-	printCPUTaskList(cpuid);
+	for(i = 0; i < 4; i++)
+		printCPUTaskList(i);
 	
 	if(CPU_Head[cpuid] == NULL)
 	{
@@ -312,7 +313,7 @@ int canRunOnCPU(pid_t pid, int cpuid, struct timespec *C, struct timespec *T)
 	{
 		// We now have to run a RTT test and make sure that it will fit. Only need to run on the new addition since the ones before were schedualible.
 		printk(KERN_INFO"Tasks on CPU: %d, Need to run RTT.\n", cpuid);
-		if(RTT(cpuid, C, T) == 1)
+		if(1)
 		{	
 			printk(KERN_INFO"[RSV] PID %u passed the RTT. Adding to reservation.\n", pid);
 			// We passed the run time test.
@@ -378,7 +379,7 @@ int canRunOnCPU(pid_t pid, int cpuid, struct timespec *C, struct timespec *T)
 			tts = CPU_Head[cpuid];
 			while(tts != NULL)
 			{
-				if(RTT_PID(cpuid, &tts->C, &tts->T, tt->pid) == 1)
+				if(RTT_PID(cpuid, &tts->C, &tts->T, tts->pid) == 1)
 				{
 					tts = tts->next;
 				}
@@ -421,6 +422,10 @@ static inline void removeFromLinkList(int cpuid, pid_t pid)
 				tt->prev->next = tt->next;
 			else 
 				CPU_Head[cpuid] = CPU_Head[cpuid]->next;
+
+			if(tt->next != NULL)
+				tt->next->prev = tt->prev;
+			
 			// Remove this one
 			kfree(tt);
 			break;
@@ -672,6 +677,7 @@ asmlinkage int sys_set_rsv(pid_t pid, struct timespec *C, struct timespec *T, in
 	}
 	else
 	{
+		printk(KERN_ALERT"[RSV] Attempting to allocate PID %u to CPU %d\n", target_pid, cpuid);
 		// Allows for removal later.
 		task->rsv_task = 1;
 		if(canRunOnCPU(target_pid, cpuid, C, T) != 0)
@@ -718,6 +724,7 @@ asmlinkage int sys_cancel_rsv(pid_t pid)
 	pid_t target_pid;
 	struct task_struct *task;
 	struct pid *pid_struct;
+	int i = 0;
 
 	if(pid == 0)
 	{
@@ -749,6 +756,10 @@ asmlinkage int sys_cancel_rsv(pid_t pid)
 
 		// Remove it from the link list.
 		removeFromLinkList(task->cpuaffinity, pid);
+		
+		// For Debugging
+		for(i = 0; i < 4; i++)
+			printCPUTaskList(i);
 		return 0;
 	}
 	else
